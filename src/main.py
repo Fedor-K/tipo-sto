@@ -42,13 +42,21 @@ async def fetch_odata(endpoint: str, method: str = "GET", data: dict = None):
                 response = await client.post(url, headers=headers, json=data)
             elif method == "PATCH":
                 response = await client.patch(url, headers=headers, json=data)
+            if response.status_code != 200:
+                return {"error": f"HTTP {response.status_code}: {response.text[:500]}"}
             return response.json()
     except Exception as e:
         return {"error": str(e)}
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "message": "TIPO-STO API is running", "mode": "live", "source": "1C"}
+    return {"status": "ok", "message": "TIPO-STO API is running", "mode": "live", "source": "OData"}
+
+@app.get("/api/test-odata")
+async def test_odata():
+    """Test OData connection"""
+    result = await fetch_odata("$metadata")
+    return {"odata_url": ODATA_URL, "result": result}
 
 @app.get("/api/clients")
 async def get_clients():
