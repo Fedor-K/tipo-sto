@@ -14,8 +14,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1C API Gateway URL
-API_1C_URL = "http://185.222.161.252:8080"
+# 1C OData URL (Rent1C)
+ODATA_URL = "http://172.22.0.89/1R96614/1R96614_AVTOSERV30_4pgnl9opb4/odata/standard.odata"
+ODATA_USER = "Администратор"
+ODATA_PASS = ""
 
 # Models
 class OrderCreate(BaseModel):
@@ -27,16 +29,19 @@ class OrderUpdate(BaseModel):
     status: Optional[str] = None
     comment: Optional[str] = None
 
-async def fetch_from_1c(endpoint: str, method: str = "GET", data: dict = None):
-    """Fetch data from 1C API Gateway"""
+async def fetch_odata(endpoint: str, method: str = "GET", data: dict = None):
+    """Fetch data from 1C OData"""
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        auth = (ODATA_USER, ODATA_PASS)
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        async with httpx.AsyncClient(timeout=30.0, auth=auth) as client:
+            url = f"{ODATA_URL}/{endpoint}"
             if method == "GET":
-                response = await client.get(f"{API_1C_URL}{endpoint}")
+                response = await client.get(url, headers=headers)
             elif method == "POST":
-                response = await client.post(f"{API_1C_URL}{endpoint}", json=data)
-            elif method == "PUT":
-                response = await client.put(f"{API_1C_URL}{endpoint}", json=data)
+                response = await client.post(url, headers=headers, json=data)
+            elif method == "PATCH":
+                response = await client.patch(url, headers=headers, json=data)
             return response.json()
     except Exception as e:
         return {"error": str(e)}
@@ -47,32 +52,76 @@ async def root():
 
 @app.get("/api/clients")
 async def get_clients():
-    data = await fetch_from_1c("/api/clients")
+    data = await fetch_odata("Catalog_Контрагенты?$top=100&$orderby=Code desc&$select=Code,Description")
     if "error" in data:
         return {"clients": [], "count": 0, "error": data["error"]}
-    return data
+    items = data.get("value", [])
+    clients = [{"code": c.get("Code", ""), "name": c.get("Description", "")} for c in items]
+    return {"clients": clients, "count": len(clients)}
 
 @app.get("/api/orders")
 async def get_orders():
-    data = await fetch_from_1c("/api/orders")
+    data = await fetch_odata("Document_ЗаказНаряд?$top=100&$orderby=Date desc&$select=Number,Date,СуммаДокумента&$expand=Контрагент($select=Description)")
     if "error" in data:
         return {"orders": [], "count": 0, "error": data["error"]}
-    return data
+    items = data.get("value", [])
+    orders = []
+    for o in items:
+        client = o.get("Контрагент", {}).get("Description", "") if o.get("Контрагент") else ""
+        orders.append({
+            "number": o.get("Number", ""),
+            "date": str(o.get("Date", ""))[:10],
+            "client": client,
+            "status": "В работе",
+            "sum": float(o.get("СуммаДокумента", 0) or 0)
+        })
+    return {"orders": orders, "count": len(orders)}
 
 @app.get("/api/orders/{order_number}")
 async def get_order(order_number: str):
-    data = await fetch_from_1c(f"/api/orders/{order_number}")
-    return data
+    data = await fetch_odata(f"Document_ЗаказНаряд?$filter=Number eq '{order_number}'&$expand=Контрагент($select=Description)")
+    if "error" in data:
+        return {"error": data["error"]}
+    items = data.get("value", [])
+    if not items:
+        return {"error": "Order not found"}
+    o = items[0]
+    client = o.get("Контрагент", {}).get("Description", "") if o.get("Контрагент") else ""
+    return {
+        "number": o.get("Number", ""),
+        "date": str(o.get("Date", ""))[:10],
+        "client": client,
+        "comment": o.get("Комментарий", ""),
+        "status": "В работе",
+        "sum": float(o.get("СуммаДокумента", 0) or 0)
+    }
 
 @app.post("/api/orders")
 async def create_order(order: OrderCreate):
-    data = await fetch_from_1c("/api/orders", method="POST", data=order.dict())
-    return data
+    # OData POST для создания документа
+    data = {
+        "Комментарий": order.comment
+    }
+    result = await fetch_odata("Document_ЗаказНаряд", method="POST", data=data)
+    if "error" in result:
+        return {"error": result["error"]}
+    return {"success": True, "number": result.get("Number", ""), "message": "Order created"}
 
 @app.put("/api/orders/{order_number}")
 async def update_order(order_number: str, order: OrderUpdate):
-    data = await fetch_from_1c(f"/api/orders/{order_number}", method="PUT", data=order.dict())
-    return data
+    # Сначала найти документ по номеру
+    find = await fetch_odata(f"Document_ЗаказНаряд?$filter=Number eq '{order_number}'&$select=Ref_Key")
+    if "error" in find or not find.get("value"):
+        return {"error": "Order not found"}
+    ref_key = find["value"][0].get("Ref_Key")
+    # Обновить документ
+    data = {}
+    if order.comment is not None:
+        data["Комментарий"] = order.comment
+    result = await fetch_odata(f"Document_ЗаказНаряд(guid'{ref_key}')", method="PATCH", data=data)
+    if "error" in result:
+        return {"error": result["error"]}
+    return {"success": True, "number": order_number, "message": "Order updated"}
 
 @app.get("/ui", response_class=HTMLResponse)
 async def ui():
