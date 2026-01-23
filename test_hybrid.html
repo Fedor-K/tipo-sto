@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>TIPO-STO: Тест гибридного подхода</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .card { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { background: #2196F3; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; }
+        .btn { display: inline-block; padding: 8px 16px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; margin: 2px; }
+        .btn:hover { background: #45a049; }
+        .btn-1c { background: #FF9800; }
+        .btn-1c:hover { background: #F57C00; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .status.ok { background: #E8F5E9; color: #2E7D32; }
+        .status.error { background: #FFEBEE; color: #C62828; }
+        .status.loading { background: #E3F2FD; color: #1565C0; }
+        #config { background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 TIPO-STO: Тест гибридного подхода</h1>
+        <p>Проверка: OData + ссылки на веб-клиент 1С</p>
+    </div>
+
+    <div id="config" class="card">
+        <h3>⚙️ Настройки подключения</h3>
+        <div>
+            <label>Сервер: <input type="text" id="server" value="rent1c.voshod.local" size="30"></label>
+            <label>База: <input type="text" id="base" value="autoservice" size="15"></label>
+        </div>
+        <div>
+            <label>Логин: <input type="text" id="user" value="1c_user_odata" size="15"></label>
+            <label>Пароль: <input type="password" id="pass" value="5KRvqPVt" size="15"></label>
+        </div>
+        <div style="margin-top: 10px;">
+            <button class="btn" onclick="testOData()">1. Тест OData</button>
+            <button class="btn btn-1c" onclick="open1CWeb()">2. Открыть веб-клиент 1С</button>
+        </div>
+    </div>
+
+    <div id="odata-status" class="card">
+        <h3>📡 Статус OData</h3>
+        <div id="odata-result" class="status loading">Нажмите "Тест OData"</div>
+    </div>
+
+    <div id="data-card" class="card" style="display:none;">
+        <h3>👥 Контрагенты из Rent1C <span id="count"></span></h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Наименование</th>
+                    <th>ИНН</th>
+                    <th>Телефон</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody id="data-table"></tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>📋 Прямые ссылки на 1С (тест гибридного подхода)</h3>
+        <p>Эти ссылки откроют соответствующие разделы в веб-клиенте 1С:</p>
+        <div id="direct-links">
+            <a class="btn btn-1c" href="#" onclick="open1CList('Catalog.Контрагенты')">📋 Список контрагентов</a>
+            <a class="btn btn-1c" href="#" onclick="open1CList('Catalog.Автомобили')">🚗 Список автомобилей</a>
+            <a class="btn btn-1c" href="#" onclick="open1CList('Document.ЗаказНаряд')">📄 Заказ-наряды</a>
+            <a class="btn btn-1c" href="#" onclick="open1CList('Catalog.Номенклатура')">📦 Номенклатура</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>✅ Чек-лист проверки</h3>
+        <ul>
+            <li id="check1">⬜ OData возвращает данные</li>
+            <li id="check2">⬜ Веб-клиент 1С открывается</li>
+            <li id="check3">⬜ Ссылка на список работает</li>
+            <li id="check4">⬜ Ссылка на конкретный элемент работает</li>
+        </ul>
+    </div>
+
+    <script>
+        function getBaseUrl() {
+            const server = document.getElementById('server').value;
+            const base = document.getElementById('base').value;
+            return `http://${server}/${base}`;
+        }
+
+        function getAuth() {
+            const user = document.getElementById('user').value;
+            const pass = document.getElementById('pass').value;
+            return 'Basic ' + btoa(user + ':' + pass);
+        }
+
+        async function testOData() {
+            const resultDiv = document.getElementById('odata-result');
+            resultDiv.className = 'status loading';
+            resultDiv.textContent = 'Загрузка...';
+
+            try {
+                const url = `${getBaseUrl()}/odata/standard.odata/Catalog_Контрагенты?$top=10&$select=Ref_Key,Description,ИНН&$filter=IsFolder eq false`;
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': getAuth() }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                const items = data.value || [];
+
+                resultDiv.className = 'status ok';
+                resultDiv.textContent = `✅ OData работает! Получено ${items.length} записей`;
+                document.getElementById('check1').textContent = '✅ OData возвращает данные';
+
+                // Показать данные
+                if (items.length > 0) {
+                    document.getElementById('data-card').style.display = 'block';
+                    document.getElementById('count').textContent = `(${items.length} шт.)`;
+
+                    const tbody = document.getElementById('data-table');
+                    tbody.innerHTML = items.map(item => `
+                        <tr>
+                            <td>${item.Description || '—'}</td>
+                            <td>${item.ИНН || '—'}</td>
+                            <td>—</td>
+                            <td>
+                                <a class="btn" href="#" onclick="open1CItem('Catalog.Контрагенты', '${item.Ref_Key}'); return false;">
+                                    Открыть в 1С
+                                </a>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = `❌ Ошибка: ${error.message}`;
+
+                if (error.message.includes('Failed to fetch')) {
+                    resultDiv.textContent += ' (CORS или сеть недоступна)';
+                }
+            }
+        }
+
+        function open1CWeb() {
+            const url = `${getBaseUrl()}/ru_RU/`;
+            window.open(url, '_blank');
+            document.getElementById('check2').textContent = '✅ Веб-клиент 1С открывается';
+        }
+
+        function open1CList(entity) {
+            const url = `${getBaseUrl()}/ru_RU/#e1cib/list/${entity}`;
+            window.open(url, '_blank');
+            document.getElementById('check3').textContent = '✅ Ссылка на список работает';
+        }
+
+        function open1CItem(entity, refKey) {
+            // Формат для открытия конкретного элемента
+            const url = `${getBaseUrl()}/ru_RU/#e1cib/data/${entity}?ref=${refKey}`;
+            window.open(url, '_blank');
+            document.getElementById('check4').textContent = '✅ Ссылка на конкретный элемент работает';
+        }
+    </script>
+</body>
+</html>

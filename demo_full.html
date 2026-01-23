@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>TIPO-STO - Полное демо</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; }
+
+        .app { display: flex; height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { width: 220px; background: #1a1a2e; color: white; flex-shrink: 0; }
+        .logo { padding: 20px; font-size: 18px; font-weight: bold; border-bottom: 1px solid #333; }
+        .nav { padding: 10px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 15px; color: #888; border-radius: 8px;
+            cursor: pointer; margin: 2px 0; font-size: 14px;
+        }
+        .nav-item:hover { background: #333; color: white; }
+        .nav-item.active { background: #4CAF50; color: white; }
+        .nav-section { font-size: 10px; color: #555; padding: 15px 15px 5px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Main */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: auto; }
+
+        /* Header */
+        .header {
+            background: white; padding: 12px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .header h1 { font-size: 16px; font-weight: 600; }
+        .header .breadcrumb { color: #888; font-size: 13px; }
+        .header .breadcrumb a { color: #4CAF50; text-decoration: none; }
+
+        /* Sections */
+        .main > div[id^="section-"] { display: none; flex-direction: column; flex: 1; min-height: 0; }
+        #section-clients { display: flex; }
+
+        /* Content */
+        .content { flex: 1; overflow: auto; padding: 20px; }
+
+        /* Cards */
+        .card { background: white; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 13px; font-weight: 600; color: #333; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-body { padding: 20px; }
+
+        /* Grid */
+        .grid { display: grid; gap: 15px; }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+        /* Form */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #4CAF50; box-shadow: 0 0 0 3px rgba(76,175,80,0.1); }
+        .form-row { display: flex; gap: 15px; }
+        .form-row .form-group { flex: 1; }
+        .form-value { font-size: 14px; font-weight: 500; color: #333; padding: 8px 0; }
+        .form-hint { font-size: 11px; color: #999; margin-top: 3px; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 18px; border: none; border-radius: 6px;
+            font-size: 13px; font-weight: 500; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-primary:hover { background: #43a047; }
+        .btn-secondary { background: #f5f5f5; color: #333; border: 1px solid #ddd; }
+        .btn-secondary:hover { background: #eee; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-icon { padding: 8px; min-width: 36px; justify-content: center; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+        th { background: #fafafa; font-weight: 600; color: #555; font-size: 11px; text-transform: uppercase; }
+        tr:hover { background: #fafafa; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .text-muted { color: #888; }
+
+        /* Status badges */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-new { background: #e3f2fd; color: #1976d2; }
+        .badge-progress { background: #fff3e0; color: #f57c00; }
+        .badge-done { background: #e8f5e9; color: #388e3c; }
+        .badge-closed { background: #f5f5f5; color: #666; }
+
+        /* Client card */
+        .client-header { display: flex; gap: 20px; align-items: flex-start; padding: 20px; }
+        .client-avatar {
+            width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 32px; color: white; flex-shrink: 0;
+        }
+        .client-info { flex: 1; }
+        .client-name { font-size: 22px; font-weight: 600; margin-bottom: 5px; }
+        .client-type { font-size: 13px; color: #888; margin-bottom: 10px; }
+        .client-contacts { display: flex; gap: 20px; flex-wrap: wrap; }
+        .client-contact { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #333; }
+        .client-contact .icon { color: #4CAF50; }
+
+        /* Stats */
+        .stats { display: flex; gap: 30px; padding: 15px 20px; background: #fafafa; border-top: 1px solid #eee; }
+        .stat { }
+        .stat-value { font-size: 24px; font-weight: 700; color: #333; }
+        .stat-label { font-size: 12px; color: #888; }
+
+        /* Car card */
+        .car-item {
+            display: flex; align-items: center; gap: 15px; padding: 15px;
+            border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .car-item:hover { border-color: #4CAF50; background: #f9fff9; }
+        .car-item.selected { border-color: #4CAF50; background: #e8f5e9; }
+        .car-icon { font-size: 28px; }
+        .car-info { flex: 1; }
+        .car-name { font-weight: 600; font-size: 14px; }
+        .car-details { font-size: 12px; color: #888; margin-top: 3px; }
+        .car-vin { font-family: monospace; font-size: 11px; color: #666; margin-top: 3px; }
+
+        /* Order row */
+        .order-item {
+            display: flex; align-items: center; padding: 15px;
+            border-bottom: 1px solid #eee; cursor: pointer;
+        }
+        .order-item:hover { background: #fafafa; }
+        .order-num { width: 100px; font-weight: 600; color: #4CAF50; }
+        .order-date { width: 100px; color: #888; font-size: 13px; }
+        .order-desc { flex: 1; }
+        .order-sum { width: 100px; text-align: right; font-weight: 600; }
+        .order-status { width: 100px; text-align: right; }
+
+        /* Tabs */
+        .tabs { display: flex; border-bottom: 1px solid #eee; background: #fafafa; }
+        .tab { padding: 12px 20px; cursor: pointer; font-size: 13px; color: #666; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+        .tab:hover { color: #333; }
+        .tab.active { color: #4CAF50; border-bottom-color: #4CAF50; font-weight: 600; }
+
+        /* Search */
+        .search-box {
+            display: flex; align-items: center; gap: 10px;
+            background: #f5f5f5; border-radius: 8px; padding: 8px 15px;
+        }
+        .search-box input { flex: 1; border: none; background: none; font-size: 14px; outline: none; }
+        .search-box .icon { color: #888; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.open { display: flex; }
+        .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { font-size: 16px; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
+
+        /* List items for modal selection */
+        .list-item { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .list-item:hover { background: #f5f5f5; }
+        .list-item-main { flex: 1; }
+        .list-item-title { font-weight: 500; }
+        .list-item-sub { font-size: 12px; color: #888; }
+
+        /* Actions bar */
+        .actions-bar {
+            padding: 15px 20px; background: white; border-top: 1px solid #eee;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .actions-bar .spacer { flex: 1; }
+
+        /* Loading */
+        .loading { text-align: center; padding: 40px; color: #888; }
+
+        /* Summary row */
+        .summary-row { display: flex; justify-content: flex-end; padding: 15px 20px; background: #fafafa; gap: 40px; }
+        .summary-item { text-align: right; }
+        .summary-label { font-size: 12px; color: #888; }
+        .summary-value { font-size: 20px; font-weight: 700; }
+        .summary-value.total { color: #4CAF50; }
+
+        /* Add row button */
+        .add-row { display: flex; align-items: center; gap: 8px; padding: 12px; color: #4CAF50; cursor: pointer; font-size: 13px; }
+        .add-row:hover { background: #f9fff9; }
+
+        /* Editable table row */
+        .table-input { width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+        .table-input:focus { outline: none; border-color: #4CAF50; }
+
+        /* Remove button */
+        .remove-btn { color: #f44336; cursor: pointer; opacity: 0.5; }
+        .remove-btn:hover { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">TIPO-STO</div>
+            <div class="nav">
+                <div class="nav-section">Основное</div>
+                <div class="nav-item" onclick="showSection('dashboard')">📊 Дашборд</div>
+                <div class="nav-item" onclick="showSection('orders')">📋 Заказ-наряды</div>
+                <div class="nav-item active" onclick="showSection('clients')">👥 Клиенты</div>
+                <div class="nav-item" onclick="showSection('cars')">🚗 Автомобили</div>
+                <div class="nav-section">Справочники</div>
+                <div class="nav-item">🔧 Работы</div>
+                <div class="nav-item">📦 Запчасти</div>
+            </div>
+        </div>
+
+        <div class="main">
+            <!-- Section: Clients List -->
+            <div id="section-clients">
+                <div class="header">
+                    <h1>Клиенты</h1>
+                    <div style="flex:1"></div>
+                    <div class="search-box" style="width: 300px;">
+                        <span class="icon">🔍</span>
+                        <input type="text" id="client-search" placeholder="Поиск по имени, телефону, VIN..." oninput="searchClients(this.value)">
+                    </div>
+                    <button class="btn btn-primary">+ Новый клиент</button>
+                </div>
+                <div class="content">
+                    <div class="card">
+                        <div id="clients-list" class="loading">Загрузка клиентов...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Client Card -->
+            <div id="section-client-card" style="display: none;">
+                <div class="header">
+                    <span class="breadcrumb"><a href="#" onclick="showSection('clients')">Клиенты</a> / </span>
+                    <h1 id="client-card-title">Карточка клиента</h1>
+                    <div style="flex:1"></div>
+                    <button class="btn btn-primary" onclick="createOrderForClient()">+ Новый заказ</button>
+                </div>
+                <div class="content">
+                    <!-- Client header -->
+                    <div class="card">
+                        <div class="client-header">
+                            <div class="client-avatar" id="client-avatar">👤</div>
+                            <div class="client-info">
+                                <div class="client-name" id="client-full-name">—</div>
+                                <div class="client-type" id="client-type">—</div>
+                                <div class="client-contacts">
+                                    <div class="client-contact"><span class="icon">📞</span> <span id="client-phone">—</span></div>
+                                    <div class="client-contact"><span class="icon">✉️</span> <span id="client-email">—</span></div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm">✏️ Редактировать</button>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">
+                                <div class="stat-value" id="stat-orders">0</div>
+                                <div class="stat-label">Визитов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value" id="stat-total">0 ₽</div>
+                                <div class="stat-label">Сумма заказов</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value" id="stat-last">—</div>
+                                <div class="stat-label">Последний визит</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2">
+                        <!-- Cars -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">🚗 Автомобили</span>
+                                <button class="btn btn-sm btn-secondary">+ Добавить</button>
+                            </div>
+                            <div class="card-body" id="client-cars">
+                                <div class="loading">Загрузка...</div>
+                            </div>
+                        </div>
+
+                        <!-- Info -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">📝 Информация</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>ИНН</label>
+                                        <div class="form-value" id="client-inn">—</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Дата рождения</label>
+                                        <div class="form-value" id="client-birthday">—</div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Комментарий</label>
+                                    <div class="form-value" id="client-comment">—</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Orders history -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📋 История заказов</span>
+                        </div>
+                        <div class="tabs">
+                            <div class="tab active">Все</div>
+                            <div class="tab">В работе</div>
+                            <div class="tab">Закрытые</div>
+                        </div>
+                        <div id="client-orders">
+                            <div class="loading">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Create Order -->
+            <div id="section-create-order" style="display: none;">
+                <div class="header">
+                    <span class="breadcrumb"><a href="#" onclick="backFromOrder()">←</a></span>
+                    <h1>Новый заказ-наряд</h1>
+                    <div style="flex:1"></div>
+                    <span class="badge badge-new">Черновик</span>
+                </div>
+                <div class="content">
+                    <div class="grid grid-2">
+                        <!-- Client & Car -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">👤 Клиент и автомобиль</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label>Клиент *</label>
+                                    <div style="display: flex; gap: 10px;">
+                                        <input type="text" id="order-client-name" readonly placeholder="Выберите клиента" style="flex:1;">
+                                        <input type="hidden" id="order-client-key">
+                                        <button class="btn btn-secondary" onclick="openClientSelector()">Выбрать</button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Автомобиль</label>
+                                    <div id="order-cars-list">
+                                        <div class="text-muted" style="padding: 10px 0;">Сначала выберите клиента</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="order-car-key">
+                            </div>
+                        </div>
+
+                        <!-- Order details -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">📝 Данные заказа</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Вид ремонта</label>
+                                        <select id="order-repair-type">
+                                            <option value="">— Выберите —</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Цех</label>
+                                        <select id="order-workshop">
+                                            <option value="">— Выберите —</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Пробег (км)</label>
+                                        <input type="number" id="order-mileage" placeholder="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Мастер</label>
+                                        <select id="order-master">
+                                            <option value="">— Выберите —</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Причина обращения</label>
+                                    <textarea id="order-description" rows="2" placeholder="Опишите причину обращения"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Works -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">🔧 Работы</span>
+                            <button class="btn btn-sm btn-primary" onclick="openWorksSelector()">+ Добавить работу</button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">№</th>
+                                    <th>Наименование</th>
+                                    <th style="width: 80px;">Кол-во</th>
+                                    <th style="width: 100px;">Цена</th>
+                                    <th style="width: 100px;">Сумма</th>
+                                    <th style="width: 40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="order-works-table">
+                                <tr><td colspan="6" class="text-center text-muted">Нажмите "Добавить работу"</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="summary-row">
+                            <div class="summary-item">
+                                <div class="summary-label">Итого работы</div>
+                                <div class="summary-value" id="sum-works">0 ₽</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Parts -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📦 Запчасти</span>
+                            <button class="btn btn-sm btn-primary" onclick="openPartsSelector()">+ Добавить запчасть</button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">№</th>
+                                    <th>Наименование</th>
+                                    <th style="width: 80px;">Кол-во</th>
+                                    <th style="width: 100px;">Цена</th>
+                                    <th style="width: 80px;">Скидка</th>
+                                    <th style="width: 100px;">Сумма</th>
+                                    <th style="width: 40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="order-parts-table">
+                                <tr><td colspan="7" class="text-center text-muted">Нажмите "Добавить запчасть"</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="summary-row">
+                            <div class="summary-item">
+                                <div class="summary-label">Итого запчасти</div>
+                                <div class="summary-value" id="sum-parts">0 ₽</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total -->
+                    <div class="card">
+                        <div class="summary-row" style="background: white;">
+                            <div class="summary-item">
+                                <div class="summary-label">Работы</div>
+                                <div class="summary-value" id="total-works">0 ₽</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Запчасти</div>
+                                <div class="summary-value" id="total-parts">0 ₽</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Скидка</div>
+                                <div class="summary-value" id="total-discount">0 ₽</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">ИТОГО К ОПЛАТЕ</div>
+                                <div class="summary-value total" id="total-sum">0 ₽</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions-bar">
+                    <button class="btn btn-secondary" onclick="backFromOrder()">Отмена</button>
+                    <div class="spacer"></div>
+                    <button class="btn btn-secondary">💾 Сохранить черновик</button>
+                    <button class="btn btn-primary" onclick="saveOrder()">✓ Создать заказ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Client selector -->
+    <div id="modal-client" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Выбор клиента</h2>
+                <button class="btn btn-icon btn-secondary" onclick="closeModal('modal-client')">✕</button>
+            </div>
+            <div style="padding: 15px; border-bottom: 1px solid #eee;">
+                <input type="text" id="modal-client-search" placeholder="Поиск по имени, телефону..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;" oninput="searchClientsModal(this.value)">
+            </div>
+            <div class="modal-body" id="modal-client-list" style="max-height: 400px; overflow: auto;">
+                <div class="loading">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Works selector -->
+    <div id="modal-works" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>Добавить работу</h2>
+                <button class="btn btn-icon btn-secondary" onclick="closeModal('modal-works')">✕</button>
+            </div>
+            <div style="padding: 15px; border-bottom: 1px solid #eee;">
+                <input type="text" id="modal-works-search" placeholder="Поиск работы..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;" oninput="searchWorks(this.value)">
+            </div>
+            <div class="modal-body" id="modal-works-list" style="max-height: 400px; overflow: auto;">
+                <div class="loading">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Parts selector -->
+    <div id="modal-parts" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>Добавить запчасть</h2>
+                <button class="btn btn-icon btn-secondary" onclick="closeModal('modal-parts')">✕</button>
+            </div>
+            <div style="padding: 15px; border-bottom: 1px solid #eee;">
+                <input type="text" id="modal-parts-search" placeholder="Поиск по названию или артикулу..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;" oninput="searchParts(this.value)">
+            </div>
+            <div class="modal-body" id="modal-parts-list" style="max-height: 400px; overflow: auto;">
+                <div class="loading">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentClient = null;
+        let orderWorks = [];
+        let orderParts = [];
+        let allClients = [];
+        let allWorks = [];
+        let allParts = [];
+
+        // === INIT ===
+        async function init() {
+            await loadClients();
+            await loadDictionaries();
+        }
+
+        // === CLIENTS ===
+        async function loadClients() {
+            const container = document.getElementById('clients-list');
+            try {
+                const resp = await fetch('/proxy/odata/Catalog_Контрагенты?$filter=IsFolder eq false&$orderby=Description&$top=50&$format=json');
+                const data = await resp.json();
+                allClients = data.value || [];
+                renderClients(allClients);
+            } catch (e) {
+                container.innerHTML = `<div class="loading">Ошибка: ${e.message}</div>`;
+            }
+        }
+
+        function renderClients(clients) {
+            const container = document.getElementById('clients-list');
+            if (clients.length === 0) {
+                container.innerHTML = '<div class="loading">Клиенты не найдены</div>';
+                return;
+            }
+            container.innerHTML = clients.map(c => `
+                <div class="order-item" onclick="openClientCard('${c.Ref_Key}')">
+                    <div class="order-num" style="width: 50px;">👤</div>
+                    <div class="order-desc">
+                        <div style="font-weight: 600;">${c.Description || c.НаименованиеПолное || '—'}</div>
+                        <div style="font-size: 12px; color: #888;">${c.ВидКонтрагента || ''} ${c.ИНН ? '• ИНН: ' + c.ИНН : ''}</div>
+                    </div>
+                    <div class="order-sum" style="color: #888; font-weight: normal;">${c.Фамилия ? c.Фамилия + ' ' + (c.Имя || '')[0] + '.' : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        function searchClients(query) {
+            const q = query.toLowerCase();
+            const filtered = allClients.filter(c =>
+                (c.Description || '').toLowerCase().includes(q) ||
+                (c.ИНН || '').includes(q) ||
+                (c.Фамилия || '').toLowerCase().includes(q)
+            );
+            renderClients(filtered);
+        }
+
+        // === CLIENT CARD ===
+        async function openClientCard(refKey) {
+            showSection('client-card');
+
+            // Load client
+            const resp = await fetch(`/proxy/odata/Catalog_Контрагенты(guid'${refKey}')?$format=json`);
+            currentClient = await resp.json();
+
+            // Render client info
+            document.getElementById('client-card-title').textContent = currentClient.Description;
+            document.getElementById('client-full-name').textContent = currentClient.НаименованиеПолное || currentClient.Description;
+            document.getElementById('client-type').textContent = currentClient.ВидКонтрагента || 'Клиент';
+            document.getElementById('client-inn').textContent = currentClient.ИНН || '—';
+            document.getElementById('client-birthday').textContent = currentClient.ДатаРождения && currentClient.ДатаРождения !== '0001-01-01T00:00:00'
+                ? new Date(currentClient.ДатаРождения).toLocaleDateString('ru-RU') : '—';
+            document.getElementById('client-comment').textContent = currentClient.Комментарий || '—';
+
+            // Avatar initials
+            const initials = (currentClient.Фамилия || currentClient.Description || '?')[0].toUpperCase();
+            document.getElementById('client-avatar').textContent = initials;
+
+            // Contacts
+            const contacts = currentClient.КонтактнаяИнформация || [];
+            const phone = contacts.find(c => c.Тип === 'Телефон');
+            const email = contacts.find(c => c.Тип === 'АдресЭлектроннойПочты');
+            document.getElementById('client-phone').textContent = phone?.Представление || '—';
+            document.getElementById('client-email').textContent = email?.Представление || '—';
+
+            // Load cars
+            await loadClientCars(refKey);
+
+            // Load orders
+            await loadClientOrders(refKey);
+        }
+
+        async function loadClientCars(clientKey) {
+            const container = document.getElementById('client-cars');
+            try {
+                // В Альфа-Авто автомобили связаны через заказ-наряды, загрузим все авто
+                const resp = await fetch(`/proxy/odata/Catalog_Автомобили?$filter=IsFolder eq false&$top=20&$format=json`);
+                const data = await resp.json();
+                const cars = data.value || [];
+
+                if (cars.length === 0) {
+                    container.innerHTML = '<div class="text-muted">Нет автомобилей</div>';
+                    return;
+                }
+
+                container.innerHTML = cars.slice(0, 5).map(car => `
+                    <div class="car-item">
+                        <div class="car-icon">🚗</div>
+                        <div class="car-info">
+                            <div class="car-name">${car.Description || '—'}</div>
+                            <div class="car-details">Год: ${car.ГодВыпуска || '—'}</div>
+                            <div class="car-vin">VIN: ${car.VIN || '—'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = `<div class="text-muted">Ошибка загрузки</div>`;
+            }
+        }
+
+        async function loadClientOrders(clientKey) {
+            const container = document.getElementById('client-orders');
+            try {
+                const resp = await fetch(`/proxy/odata/Document_ЗаказНаряд?$filter=Контрагент_Key eq guid'${clientKey}'&$orderby=Date desc&$top=20&$format=json`);
+                const data = await resp.json();
+                const orders = data.value || [];
+
+                // Stats
+                document.getElementById('stat-orders').textContent = orders.length;
+                const totalSum = orders.reduce((s, o) => s + (o.СуммаНоменклатурыДокумента || 0) + (o.СуммаРаботДокумента || 0), 0);
+                document.getElementById('stat-total').textContent = totalSum.toLocaleString('ru-RU') + ' ₽';
+                document.getElementById('stat-last').textContent = orders.length > 0
+                    ? new Date(orders[0].Date).toLocaleDateString('ru-RU') : '—';
+
+                if (orders.length === 0) {
+                    container.innerHTML = '<div class="loading">Нет заказов</div>';
+                    return;
+                }
+
+                container.innerHTML = orders.map(o => {
+                    const sum = (o.СуммаНоменклатурыДокумента || 0) + (o.СуммаРаботДокумента || 0);
+                    return `
+                        <div class="order-item">
+                            <div class="order-num">№${(o.Number || '').trim()}</div>
+                            <div class="order-date">${new Date(o.Date).toLocaleDateString('ru-RU')}</div>
+                            <div class="order-desc">${o.ОписаниеПричиныОбращения || 'Ремонт'}</div>
+                            <div class="order-sum">${sum.toLocaleString('ru-RU')} ₽</div>
+                            <div class="order-status">
+                                <span class="badge ${o.Posted ? 'badge-done' : 'badge-progress'}">${o.Posted ? 'Проведён' : 'Черновик'}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = `<div class="loading">Ошибка: ${e.message}</div>`;
+            }
+        }
+
+        // === CREATE ORDER ===
+        function createOrderForClient() {
+            showSection('create-order');
+
+            // Set client
+            if (currentClient) {
+                document.getElementById('order-client-key').value = currentClient.Ref_Key;
+                document.getElementById('order-client-name').value = currentClient.Description;
+                loadClientCarsForOrder(currentClient.Ref_Key);
+            }
+
+            // Clear
+            orderWorks = [];
+            orderParts = [];
+            renderOrderWorks();
+            renderOrderParts();
+            updateTotals();
+        }
+
+        async function loadClientCarsForOrder(clientKey) {
+            const container = document.getElementById('order-cars-list');
+            try {
+                const resp = await fetch(`/proxy/odata/Catalog_Автомобили?$filter=IsFolder eq false&$top=10&$format=json`);
+                const data = await resp.json();
+                const cars = data.value || [];
+
+                if (cars.length === 0) {
+                    container.innerHTML = '<div class="text-muted">Нет автомобилей</div>';
+                    return;
+                }
+
+                container.innerHTML = cars.map(car => `
+                    <div class="car-item" onclick="selectCar(this, '${car.Ref_Key}')">
+                        <div class="car-icon">🚗</div>
+                        <div class="car-info">
+                            <div class="car-name">${car.Description || '—'}</div>
+                            <div class="car-vin">VIN: ${car.VIN || '—'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = `<div class="text-muted">Ошибка</div>`;
+            }
+        }
+
+        function selectCar(el, refKey) {
+            document.querySelectorAll('#order-cars-list .car-item').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            document.getElementById('order-car-key').value = refKey;
+        }
+
+        // === DICTIONARIES ===
+        async function loadDictionaries() {
+            // Repair types
+            try {
+                const resp = await fetch('/proxy/odata/Catalog_ВидыРемонта?$format=json');
+                const data = await resp.json();
+                const select = document.getElementById('order-repair-type');
+                (data.value || []).forEach(t => {
+                    select.innerHTML += `<option value="${t.Ref_Key}">${t.Description}</option>`;
+                });
+            } catch (e) {}
+
+            // Workshops
+            try {
+                const resp = await fetch('/proxy/odata/Catalog_Цеха?$format=json');
+                const data = await resp.json();
+                const select = document.getElementById('order-workshop');
+                (data.value || []).forEach(t => {
+                    select.innerHTML += `<option value="${t.Ref_Key}">${t.Description}</option>`;
+                });
+            } catch (e) {}
+
+            // Masters (employees)
+            try {
+                const resp = await fetch('/proxy/odata/Catalog_Сотрудники?$filter=IsFolder eq false&$top=20&$format=json');
+                const data = await resp.json();
+                const select = document.getElementById('order-master');
+                (data.value || []).forEach(t => {
+                    select.innerHTML += `<option value="${t.Ref_Key}">${t.Description}</option>`;
+                });
+            } catch (e) {}
+        }
+
+        // === MODALS ===
+        function openModal(id) {
+            document.getElementById(id).classList.add('open');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+
+        // Client selector
+        function openClientSelector() {
+            openModal('modal-client');
+            renderClientsModal(allClients);
+        }
+
+        function renderClientsModal(clients) {
+            const container = document.getElementById('modal-client-list');
+            container.innerHTML = clients.slice(0, 30).map(c => `
+                <div class="list-item" onclick="selectClient('${c.Ref_Key}', '${(c.Description || '').replace(/'/g, "\\'")}')">
+                    <div>👤</div>
+                    <div class="list-item-main">
+                        <div class="list-item-title">${c.Description}</div>
+                        <div class="list-item-sub">${c.ВидКонтрагента || ''}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchClientsModal(query) {
+            const q = query.toLowerCase();
+            const filtered = allClients.filter(c => (c.Description || '').toLowerCase().includes(q));
+            renderClientsModal(filtered);
+        }
+
+        function selectClient(refKey, name) {
+            document.getElementById('order-client-key').value = refKey;
+            document.getElementById('order-client-name').value = name;
+            closeModal('modal-client');
+            loadClientCarsForOrder(refKey);
+        }
+
+        // Works selector
+        async function openWorksSelector() {
+            openModal('modal-works');
+            if (allWorks.length === 0) {
+                const resp = await fetch('/proxy/odata/Catalog_Автоработы?$filter=IsFolder eq false&$top=100&$format=json');
+                const data = await resp.json();
+                allWorks = data.value || [];
+            }
+            renderWorksModal(allWorks);
+        }
+
+        function renderWorksModal(works) {
+            const container = document.getElementById('modal-works-list');
+            container.innerHTML = works.slice(0, 50).map(w => `
+                <div class="list-item" onclick="addWork('${w.Ref_Key}', '${(w.Description || '').replace(/'/g, "\\'")}', ${w.ВремяВыполнения || 0})">
+                    <div>🔧</div>
+                    <div class="list-item-main">
+                        <div class="list-item-title">${w.Description}</div>
+                        <div class="list-item-sub">Время: ${w.ВремяВыполнения || 0} мин</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchWorks(query) {
+            const q = query.toLowerCase();
+            const filtered = allWorks.filter(w => (w.Description || '').toLowerCase().includes(q));
+            renderWorksModal(filtered);
+        }
+
+        function addWork(refKey, name, time) {
+            orderWorks.push({ refKey, name, qty: 1, price: 0, time });
+            renderOrderWorks();
+            updateTotals();
+            closeModal('modal-works');
+        }
+
+        function renderOrderWorks() {
+            const tbody = document.getElementById('order-works-table');
+            if (orderWorks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Нажмите "Добавить работу"</td></tr>';
+                return;
+            }
+            tbody.innerHTML = orderWorks.map((w, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${w.name}</td>
+                    <td><input type="number" class="table-input" value="${w.qty}" min="1" onchange="updateWorkQty(${i}, this.value)"></td>
+                    <td><input type="number" class="table-input" value="${w.price}" min="0" onchange="updateWorkPrice(${i}, this.value)"></td>
+                    <td class="text-right">${(w.qty * w.price).toLocaleString('ru-RU')} ₽</td>
+                    <td><span class="remove-btn" onclick="removeWork(${i})">✕</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function updateWorkQty(idx, val) { orderWorks[idx].qty = parseInt(val) || 1; updateTotals(); renderOrderWorks(); }
+        function updateWorkPrice(idx, val) { orderWorks[idx].price = parseFloat(val) || 0; updateTotals(); renderOrderWorks(); }
+        function removeWork(idx) { orderWorks.splice(idx, 1); renderOrderWorks(); updateTotals(); }
+
+        // Parts selector
+        async function openPartsSelector() {
+            openModal('modal-parts');
+            if (allParts.length === 0) {
+                const resp = await fetch('/proxy/odata/Catalog_Номенклатура?$filter=IsFolder eq false&$top=100&$format=json');
+                const data = await resp.json();
+                allParts = data.value || [];
+            }
+            renderPartsModal(allParts);
+        }
+
+        function renderPartsModal(parts) {
+            const container = document.getElementById('modal-parts-list');
+            container.innerHTML = parts.slice(0, 50).map(p => `
+                <div class="list-item" onclick="addPart('${p.Ref_Key}', '${(p.Description || '').replace(/'/g, "\\'")}', '${p.Артикул || ''}')">
+                    <div>📦</div>
+                    <div class="list-item-main">
+                        <div class="list-item-title">${p.Description}</div>
+                        <div class="list-item-sub">Артикул: ${p.Артикул || '—'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchParts(query) {
+            const q = query.toLowerCase();
+            const filtered = allParts.filter(p =>
+                (p.Description || '').toLowerCase().includes(q) ||
+                (p.Артикул || '').toLowerCase().includes(q)
+            );
+            renderPartsModal(filtered);
+        }
+
+        function addPart(refKey, name, article) {
+            orderParts.push({ refKey, name, article, qty: 1, price: 0, discount: 0 });
+            renderOrderParts();
+            updateTotals();
+            closeModal('modal-parts');
+        }
+
+        function renderOrderParts() {
+            const tbody = document.getElementById('order-parts-table');
+            if (orderParts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Нажмите "Добавить запчасть"</td></tr>';
+                return;
+            }
+            tbody.innerHTML = orderParts.map((p, i) => {
+                const sum = p.qty * p.price * (1 - p.discount / 100);
+                return `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${p.name}<br><small class="text-muted">${p.article}</small></td>
+                        <td><input type="number" class="table-input" value="${p.qty}" min="1" onchange="updatePartQty(${i}, this.value)"></td>
+                        <td><input type="number" class="table-input" value="${p.price}" min="0" onchange="updatePartPrice(${i}, this.value)"></td>
+                        <td><input type="number" class="table-input" value="${p.discount}" min="0" max="100" onchange="updatePartDiscount(${i}, this.value)">%</td>
+                        <td class="text-right">${sum.toLocaleString('ru-RU')} ₽</td>
+                        <td><span class="remove-btn" onclick="removePart(${i})">✕</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updatePartQty(idx, val) { orderParts[idx].qty = parseInt(val) || 1; updateTotals(); renderOrderParts(); }
+        function updatePartPrice(idx, val) { orderParts[idx].price = parseFloat(val) || 0; updateTotals(); renderOrderParts(); }
+        function updatePartDiscount(idx, val) { orderParts[idx].discount = parseFloat(val) || 0; updateTotals(); renderOrderParts(); }
+        function removePart(idx) { orderParts.splice(idx, 1); renderOrderParts(); updateTotals(); }
+
+        // Totals
+        function updateTotals() {
+            const worksSum = orderWorks.reduce((s, w) => s + w.qty * w.price, 0);
+            const partsSum = orderParts.reduce((s, p) => s + p.qty * p.price, 0);
+            const discountSum = orderParts.reduce((s, p) => s + p.qty * p.price * p.discount / 100, 0);
+            const total = worksSum + partsSum - discountSum;
+
+            document.getElementById('sum-works').textContent = worksSum.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('sum-parts').textContent = partsSum.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('total-works').textContent = worksSum.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('total-parts').textContent = partsSum.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('total-discount').textContent = discountSum.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('total-sum').textContent = total.toLocaleString('ru-RU') + ' ₽';
+        }
+
+        // Save order
+        async function saveOrder() {
+            const clientKey = document.getElementById('order-client-key').value;
+            if (!clientKey) {
+                alert('Выберите клиента');
+                return;
+            }
+
+            try {
+                // Get organization
+                const orgResp = await fetch('/proxy/odata/Catalog_Организации?$top=1&$format=json');
+                const orgData = await orgResp.json();
+                const org = orgData.value?.[0];
+
+                const valResp = await fetch('/proxy/odata/Catalog_Валюты?$top=1&$format=json');
+                const valData = await valResp.json();
+                const val = valData.value?.[0];
+
+                const carKey = document.getElementById('order-car-key').value;
+                const repairType = document.getElementById('order-repair-type').value;
+                const workshop = document.getElementById('order-workshop').value;
+                const mileage = document.getElementById('order-mileage').value;
+                const description = document.getElementById('order-description').value;
+
+                const orderData = {
+                    Date: new Date().toISOString(),
+                    Контрагент_Key: clientKey,
+                    Организация_Key: org?.Ref_Key,
+                    ВалютаДокумента_Key: val?.Ref_Key,
+                    ВидРемонта_Key: repairType || undefined,
+                    Цех_Key: workshop || undefined,
+                    Пробег: mileage || "0",
+                    ОписаниеПричиныОбращения: description || "Ремонт",
+                    Автомобили: carKey ? [{ Автомобиль_Key: carKey }] : [],
+                    Автоработы: orderWorks.map(w => ({
+                        Авторабота_Key: w.refKey,
+                        Количество: w.qty,
+                        Цена: w.price,
+                        Сумма: w.qty * w.price
+                    })),
+                    Товары: orderParts.map(p => ({
+                        Номенклатура_Key: p.refKey,
+                        Количество: p.qty,
+                        Цена: p.price,
+                        Сумма: p.qty * p.price * (1 - p.discount / 100),
+                        ПроцентСкидки: p.discount
+                    }))
+                };
+
+                const resp = await fetch('/proxy/odata/Document_ЗаказНаряд?$format=json', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.text();
+                    throw new Error(err);
+                }
+
+                const result = await resp.json();
+                alert('Заказ создан: №' + (result.Number || '').trim());
+                backFromOrder();
+
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
+            }
+        }
+
+        // Navigation
+        function showSection(name) {
+            // Hide all sections
+            document.querySelectorAll('.main > div[id^="section-"]').forEach(d => d.style.display = 'none');
+
+            // Show target section
+            const section = document.getElementById('section-' + name);
+            if (section) {
+                section.style.display = 'flex';
+                section.style.flexDirection = 'column';
+                section.style.flex = '1';
+                section.style.overflow = 'auto';
+            }
+
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        }
+
+        function backFromOrder() {
+            if (currentClient) {
+                showSection('client-card');
+            } else {
+                showSection('clients');
+            }
+        }
+
+        // Init
+        init();
+    </script>
+</body>
+</html>

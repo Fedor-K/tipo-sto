@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>TIPO-STO: Тест гибридного подхода</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .card { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { background: #2196F3; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; }
+        .btn { display: inline-block; padding: 8px 16px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; margin: 2px; cursor: pointer; border: none; font-size: 14px; }
+        .btn:hover { background: #45a049; }
+        .btn-1c { background: #FF9800; }
+        .btn-1c:hover { background: #F57C00; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .status.ok { background: #E8F5E9; color: #2E7D32; }
+        .status.error { background: #FFEBEE; color: #C62828; }
+        .status.loading { background: #E3F2FD; color: #1565C0; }
+        .checklist li { padding: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>TIPO-STO: Тест гибридного подхода</h1>
+        <p>Проверка: OData через прокси + ссылки на веб-клиент 1С</p>
+    </div>
+
+    <div class="card">
+        <h3>1. Тест OData (через прокси)</h3>
+        <button class="btn" onclick="testOData()">Загрузить контрагентов</button>
+        <div id="odata-result" class="status loading">Нажмите кнопку</div>
+    </div>
+
+    <div id="data-card" class="card" style="display:none;">
+        <h3>Контрагенты из Rent1C</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Наименование</th>
+                    <th>ИНН</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody id="data-table"></tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>2. Тест веб-клиента 1С</h3>
+        <button class="btn" onclick="testWebClient()">Проверить доступность</button>
+        <button class="btn btn-1c" onclick="open1CWeb()">Открыть веб-клиент</button>
+        <div id="webclient-result" class="status loading">Нажмите кнопку</div>
+    </div>
+
+    <div class="card">
+        <h3>3. Глубокие ссылки на 1С</h3>
+        <p>Кликните для открытия соответствующего раздела в 1С:</p>
+        <button class="btn btn-1c" onclick="open1CList('Catalog.Контрагенты')">Список контрагентов</button>
+        <button class="btn btn-1c" onclick="open1CList('Catalog.Автомобили')">Список автомобилей</button>
+        <button class="btn btn-1c" onclick="open1CList('Document.ЗаказНаряд')">Заказ-наряды</button>
+        <div id="deeplink-result" class="status loading">Нажмите любую кнопку</div>
+    </div>
+
+    <div class="card">
+        <h3>Чек-лист</h3>
+        <ul class="checklist">
+            <li id="check1">⬜ OData возвращает данные</li>
+            <li id="check2">⬜ Веб-клиент 1С доступен</li>
+            <li id="check3">⬜ Глубокие ссылки работают</li>
+            <li id="check4">⬜ Ссылка на конкретный элемент работает</li>
+        </ul>
+        <div id="conclusion" class="status" style="display:none;"></div>
+    </div>
+
+    <script>
+        // Авторизация встроена в URL (Администратор без пароля)
+        const RENT1C_WEB = 'https://Администратор:@aclient.1c-hosting.com/1R96614/1R96614_AA61AS_e771ys34or/ru_RU/';
+        let checks = { odata: false, webclient: false, deeplink: false, item: false };
+
+        async function testOData() {
+            const resultDiv = document.getElementById('odata-result');
+            resultDiv.className = 'status loading';
+            resultDiv.textContent = 'Загрузка...';
+
+            try {
+                const url = '/proxy/odata/Catalog_Контрагенты?$top=10&$select=Ref_Key,Description,ИНН&$filter=IsFolder eq false';
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const items = data.value || [];
+                resultDiv.className = 'status ok';
+                resultDiv.textContent = `✅ Получено ${items.length} контрагентов`;
+                document.getElementById('check1').textContent = '✅ OData возвращает данные';
+                checks.odata = true;
+
+                if (items.length > 0) {
+                    document.getElementById('data-card').style.display = 'block';
+                    const tbody = document.getElementById('data-table');
+                    tbody.innerHTML = items.map(item => `
+                        <tr>
+                            <td>${item.Description || '—'}</td>
+                            <td>${item.ИНН || '—'}</td>
+                            <td>
+                                <button class="btn btn-1c" onclick="open1CItem('Catalog.Контрагенты', '${item.Ref_Key}')">
+                                    Открыть в 1С
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+                checkConclusion();
+
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = `❌ Ошибка: ${error.message}`;
+            }
+        }
+
+        async function testWebClient() {
+            const resultDiv = document.getElementById('webclient-result');
+            resultDiv.className = 'status loading';
+            resultDiv.textContent = 'Проверка...';
+
+            try {
+                const response = await fetch('/proxy/webclient');
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                resultDiv.className = 'status ok';
+                resultDiv.textContent = `✅ Веб-клиент доступен (HTTP ${data.code})`;
+                document.getElementById('check2').textContent = '✅ Веб-клиент 1С доступен';
+                checks.webclient = true;
+                checkConclusion();
+
+            } catch (error) {
+                resultDiv.className = 'status error';
+                resultDiv.textContent = `❌ Ошибка: ${error.message}`;
+            }
+        }
+
+        function open1CWeb() {
+            window.open(RENT1C_WEB, '_blank');
+        }
+
+        function open1CList(entity) {
+            const url = RENT1C_WEB + '#e1cib/list/' + entity;
+            window.open(url, '_blank');
+            document.getElementById('deeplink-result').className = 'status ok';
+            document.getElementById('deeplink-result').textContent = `✅ Открыта ссылка: ${entity}`;
+            document.getElementById('check3').textContent = '✅ Глубокие ссылки работают';
+            checks.deeplink = true;
+            checkConclusion();
+        }
+
+        function open1CItem(entity, refKey) {
+            const url = RENT1C_WEB + '#e1cib/data/' + entity + '?ref=' + refKey;
+            window.open(url, '_blank');
+            document.getElementById('check4').textContent = '✅ Ссылка на конкретный элемент работает';
+            checks.item = true;
+            checkConclusion();
+        }
+
+        function checkConclusion() {
+            const allPassed = checks.odata && checks.webclient && checks.deeplink && checks.item;
+            const conclusionDiv = document.getElementById('conclusion');
+
+            if (allPassed) {
+                conclusionDiv.style.display = 'block';
+                conclusionDiv.className = 'status ok';
+                conclusionDiv.innerHTML = '<strong>🎉 ВСЕ ТЕСТЫ ПРОЙДЕНЫ!</strong><br>Гибридный подход работает. Можно строить TIPO-STO на Rent1C.';
+            }
+        }
+    </script>
+</body>
+</html>

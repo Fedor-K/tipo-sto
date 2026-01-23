@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>TIPO-STO Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; }
+
+        .app { display: flex; height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: #1a1a2e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+        .logo {
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            border-bottom: 1px solid #333;
+        }
+        .nav { flex: 1; padding: 10px; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            color: #aaa;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 2px 0;
+            cursor: pointer;
+        }
+        .nav-item:hover { background: #333; color: white; }
+        .nav-item.active { background: #4CAF50; color: white; }
+        .nav-section { font-size: 11px; color: #666; padding: 15px 15px 5px; text-transform: uppercase; }
+
+        /* Main */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 15px 25px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status.new { background: #e3f2fd; color: #1976d2; }
+        .status.progress { background: #fff3e0; color: #f57c00; }
+        .status.done { background: #e8f5e9; color: #388e3c; }
+        .status.closed { background: #f5f5f5; color: #666; }
+
+        /* Content */
+        .content { flex: 1; overflow: auto; padding: 20px; }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .card-title { font-size: 14px; font-weight: 600; color: #333; }
+
+        /* Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+        /* Form */
+        .form-row { display: flex; gap: 20px; margin-bottom: 15px; }
+        .form-group { flex: 1; }
+        .form-group label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        .form-value {
+            padding: 10px 0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Table */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; padding: 10px; background: #f9f9f9; font-weight: 600; color: #555; border-bottom: 2px solid #eee; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f9f9f9; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-primary:hover { background: #43a047; }
+        .btn-secondary { background: #f5f5f5; color: #333; }
+        .btn-secondary:hover { background: #eee; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* Summary */
+        .summary { display: flex; gap: 30px; padding: 15px 0; }
+        .summary-item { }
+        .summary-label { font-size: 12px; color: #666; }
+        .summary-value { font-size: 20px; font-weight: 600; color: #333; }
+
+        /* Actions */
+        .actions { display: flex; gap: 10px; padding: 20px; background: white; border-top: 1px solid #eee; }
+
+        /* Client card */
+        .client-info { display: flex; gap: 20px; align-items: flex-start; }
+        .client-avatar {
+            width: 60px; height: 60px;
+            background: #e3f2fd;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #1976d2;
+        }
+        .client-details { flex: 1; }
+        .client-name { font-size: 16px; font-weight: 600; margin-bottom: 5px; }
+        .client-phone { color: #666; font-size: 14px; }
+
+        /* Car */
+        .car-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f5f5f5;
+            padding: 8px 15px;
+            border-radius: 8px;
+        }
+        .car-badge .icon { font-size: 18px; }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tab {
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-size: 13px;
+            color: #666;
+        }
+        .tab.active { border-bottom-color: #4CAF50; color: #4CAF50; font-weight: 600; }
+
+        /* Loading */
+        .loading { text-align: center; padding: 40px; color: #666; }
+
+        /* Order list */
+        .order-list { }
+        .order-row {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .order-row:hover { background: #f9f9f9; }
+        .order-num { width: 120px; font-weight: 600; }
+        .order-client { flex: 1; }
+        .order-car { width: 200px; color: #666; font-size: 13px; }
+        .order-sum { width: 100px; text-align: right; font-weight: 600; }
+        .order-date { width: 100px; text-align: right; color: #666; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <div class="logo">TIPO-STO</div>
+            <div class="nav">
+                <div class="nav-section">Основное</div>
+                <div class="nav-item" onclick="showSection('dashboard')">📊 Дашборд</div>
+                <div class="nav-item active" onclick="showSection('orders')">📋 Заказ-наряды</div>
+                <div class="nav-item" onclick="showSection('clients')">👥 Клиенты</div>
+                <div class="nav-item" onclick="showSection('cars')">🚗 Автомобили</div>
+                <div class="nav-section">Справочники</div>
+                <div class="nav-item">🔧 Работы</div>
+                <div class="nav-item">📦 Запчасти</div>
+            </div>
+        </div>
+
+        <div class="main">
+            <!-- Список заказов -->
+            <div id="orders-list-section">
+                <div class="header">
+                    <h1>Заказ-наряды</h1>
+                    <button class="btn btn-primary" onclick="createOrder()">+ Новый заказ</button>
+                </div>
+                <div class="content">
+                    <div class="card">
+                        <div class="tabs">
+                            <button class="tab active">Все</button>
+                            <button class="tab">В работе</button>
+                            <button class="tab">Готовы</button>
+                            <button class="tab">Закрыты</button>
+                        </div>
+                        <div id="orders-list" class="order-list">
+                            <div class="loading">Загрузка заказов...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Карточка заказа -->
+            <div id="order-detail-section" style="display: none;">
+                <div class="header">
+                    <button class="btn btn-secondary btn-sm" onclick="backToList()">← Назад</button>
+                    <h1 id="order-title">Заказ-наряд №</h1>
+                    <span class="status progress" id="order-status">В работе</span>
+                    <div style="flex:1"></div>
+                    <button class="btn btn-secondary">🖨️ Печать</button>
+                </div>
+
+                <div class="content">
+                    <div class="grid">
+                        <!-- Клиент -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Клиент</span>
+                                <button class="btn btn-sm btn-secondary">Изменить</button>
+                            </div>
+                            <div class="client-info">
+                                <div class="client-avatar">👤</div>
+                                <div class="client-details">
+                                    <div class="client-name" id="client-name">—</div>
+                                    <div class="client-phone" id="client-phone">—</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Автомобиль -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Автомобиль</span>
+                            </div>
+                            <div class="car-badge">
+                                <span class="icon">🚗</span>
+                                <div>
+                                    <div id="car-name" style="font-weight: 600;">—</div>
+                                    <div id="car-vin" style="font-size: 12px; color: #666;">—</div>
+                                </div>
+                            </div>
+                            <div class="form-row" style="margin-top: 15px;">
+                                <div class="form-group">
+                                    <label>Пробег</label>
+                                    <div class="form-value" id="car-mileage">—</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Вид ремонта</label>
+                                    <div class="form-value" id="repair-type">—</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Работы -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Работы</span>
+                            <button class="btn btn-sm btn-primary">+ Добавить</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;">№</th>
+                                        <th>Наименование</th>
+                                        <th style="width: 80px;" class="text-right">Кол-во</th>
+                                        <th style="width: 100px;" class="text-right">Цена</th>
+                                        <th style="width: 100px;" class="text-right">Сумма</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="works-table">
+                                    <tr><td colspan="5" class="text-center">Нет работ</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Запчасти -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Запчасти</span>
+                            <button class="btn btn-sm btn-primary">+ Добавить</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;">№</th>
+                                        <th>Наименование</th>
+                                        <th style="width: 80px;" class="text-right">Кол-во</th>
+                                        <th style="width: 100px;" class="text-right">Цена</th>
+                                        <th style="width: 80px;" class="text-right">Скидка</th>
+                                        <th style="width: 100px;" class="text-right">Сумма</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="parts-table">
+                                    <tr><td colspan="6" class="text-center">Нет запчастей</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Итого -->
+                    <div class="card">
+                        <div class="summary">
+                            <div class="summary-item">
+                                <div class="summary-label">Работы</div>
+                                <div class="summary-value" id="sum-works">0 ₽</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Запчасти</div>
+                                <div class="summary-value" id="sum-parts">0 ₽</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Скидка</div>
+                                <div class="summary-value" id="sum-discount">0 ₽</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">ИТОГО</div>
+                                <div class="summary-value" style="color: #4CAF50;" id="sum-total">0 ₽</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-secondary">Отменить</button>
+                    <div style="flex:1"></div>
+                    <button class="btn btn-secondary">Сохранить</button>
+                    <button class="btn btn-primary">Закрыть заказ</button>
+                </div>
+            </div>
+
+            <!-- Создание заказа -->
+            <div id="create-order-section" style="display: none;">
+                <div class="header">
+                    <button class="btn btn-secondary btn-sm" onclick="cancelCreate()">← Отмена</button>
+                    <h1>Новый заказ-наряд</h1>
+                </div>
+
+                <div class="content">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Основные данные</span>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Клиент *</label>
+                                <select id="new-client" onchange="onClientChange()">
+                                    <option value="">— Выберите клиента —</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Автомобиль</label>
+                                <select id="new-car">
+                                    <option value="">— Сначала выберите клиента —</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Вид ремонта</label>
+                                <select id="new-repair-type">
+                                    <option value="">— Выберите —</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Пробег (км)</label>
+                                <input type="number" id="new-mileage" placeholder="0">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Причина обращения</label>
+                                <input type="text" id="new-description" placeholder="Например: Замена масла">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="background: #fff3e0; border: 1px solid #ffcc80;">
+                        <p style="color: #e65100;">
+                            <strong>Демо-режим:</strong> Заказ будет создан в базе Rent1C.
+                            После создания можно добавить работы и запчасти.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-secondary" onclick="cancelCreate()">Отмена</button>
+                    <div style="flex:1"></div>
+                    <button class="btn btn-primary" id="submit-order-btn" onclick="submitNewOrder()">Создать заказ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Cache для справочников
+        const cache = {
+            clients: {},
+            cars: {},
+            works: {},
+            parts: {},
+            states: {}
+        };
+
+        // Загрузка списка заказов
+        async function loadOrders() {
+            const container = document.getElementById('orders-list');
+            try {
+                const resp = await fetch('/proxy/odata/Document_ЗаказНаряд?$top=20&$orderby=Date desc&$format=json&$expand=Контрагент,Автомобили');
+                const data = await resp.json();
+                const orders = data.value || [];
+
+                if (orders.length === 0) {
+                    container.innerHTML = '<div class="loading">Заказов нет</div>';
+                    return;
+                }
+
+                // Загрузить имена клиентов
+                const clientKeys = [...new Set(orders.map(o => o.Контрагент_Key).filter(k => k && k !== '00000000-0000-0000-0000-000000000000'))];
+                await loadClients(clientKeys);
+
+                container.innerHTML = orders.map(order => {
+                    const client = cache.clients[order.Контрагент_Key] || { Description: '—' };
+                    const date = new Date(order.Date).toLocaleDateString('ru-RU');
+                    const sum = (order.СуммаНоменклатурыДокумента || 0) + (order.СуммаРаботДокумента || 0);
+
+                    return `
+                        <div class="order-row" onclick="openOrder('${order.Ref_Key}')">
+                            <div class="order-num">№ ${order.Number.trim()}</div>
+                            <div class="order-client">${client.Description}</div>
+                            <div class="order-car">${order.ОписаниеПричиныОбращения || '—'}</div>
+                            <div class="order-sum">${sum.toLocaleString('ru-RU')} ₽</div>
+                            <div class="order-date">${date}</div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                container.innerHTML = `<div class="loading">Ошибка: ${e.message}</div>`;
+            }
+        }
+
+        // Загрузить клиентов
+        async function loadClients(keys) {
+            const toLoad = keys.filter(k => !cache.clients[k]);
+            if (toLoad.length === 0) return;
+
+            const filter = toLoad.map(k => `Ref_Key eq guid'${k}'`).join(' or ');
+            const resp = await fetch(`/proxy/odata/Catalog_Контрагенты?$filter=${encodeURIComponent(filter)}&$format=json`);
+            const data = await resp.json();
+            (data.value || []).forEach(c => cache.clients[c.Ref_Key] = c);
+        }
+
+        // Открыть заказ
+        async function openOrder(refKey) {
+            document.getElementById('orders-list-section').style.display = 'none';
+            document.getElementById('order-detail-section').style.display = 'block';
+
+            // Загрузить заказ
+            const resp = await fetch(`/proxy/odata/Document_ЗаказНаряд(guid'${refKey}')?$format=json`);
+            const order = await resp.json();
+
+            document.getElementById('order-title').textContent = `Заказ-наряд № ${order.Number.trim()}`;
+            document.getElementById('car-mileage').textContent = order.Пробег ? `${parseInt(order.Пробег).toLocaleString('ru-RU')} км` : '—';
+            document.getElementById('repair-type').textContent = order.ОписаниеПричиныОбращения || '—';
+
+            // Загрузить клиента
+            if (order.Контрагент_Key && order.Контрагент_Key !== '00000000-0000-0000-0000-000000000000') {
+                const clientResp = await fetch(`/proxy/odata/Catalog_Контрагенты(guid'${order.Контрагент_Key}')?$format=json`);
+                const client = await clientResp.json();
+                document.getElementById('client-name').textContent = client.Description || '—';
+                document.getElementById('client-phone').textContent = client.КонтактнаяИнформация?.[0]?.Представление || '—';
+            }
+
+            // Загрузить автомобили
+            const carsResp = await fetch(`/proxy/odata/Document_ЗаказНаряд(guid'${refKey}')/Автомобили?$format=json`);
+            const carsData = await carsResp.json();
+            const cars = carsData.value || [];
+            if (cars.length > 0) {
+                const carRef = cars[0].Автомобиль_Key;
+                if (carRef && carRef !== '00000000-0000-0000-0000-000000000000') {
+                    const carResp = await fetch(`/proxy/odata/Catalog_Автомобили(guid'${carRef}')?$format=json`);
+                    const car = await carResp.json();
+                    document.getElementById('car-name').textContent = car.Description || '—';
+                    document.getElementById('car-vin').textContent = car.VIN || '—';
+                }
+            }
+
+            // Загрузить работы
+            const worksResp = await fetch(`/proxy/odata/Document_ЗаказНаряд(guid'${refKey}')/Автоработы?$format=json`);
+            const worksData = await worksResp.json();
+            const works = worksData.value || [];
+            await renderWorks(works);
+
+            // Загрузить запчасти
+            const partsResp = await fetch(`/proxy/odata/Document_ЗаказНаряд(guid'${refKey}')/Товары?$format=json`);
+            const partsData = await partsResp.json();
+            const parts = partsData.value || [];
+            await renderParts(parts);
+
+            // Итоги
+            const sumWorks = works.reduce((s, w) => s + (w.Сумма || 0), 0);
+            const sumParts = parts.reduce((s, p) => s + (p.Сумма || 0), 0);
+            const sumDiscount = parts.reduce((s, p) => s + (p.СуммаСкидкиСтроки || 0), 0);
+
+            document.getElementById('sum-works').textContent = sumWorks.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('sum-parts').textContent = sumParts.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('sum-discount').textContent = sumDiscount.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('sum-total').textContent = (sumWorks + sumParts - sumDiscount).toLocaleString('ru-RU') + ' ₽';
+        }
+
+        async function renderWorks(works) {
+            const tbody = document.getElementById('works-table');
+            if (works.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">Нет работ</td></tr>';
+                return;
+            }
+
+            // Загрузить названия работ
+            const workKeys = works.map(w => w.Авторабота_Key).filter(k => k && k !== '00000000-0000-0000-0000-000000000000');
+            if (workKeys.length > 0) {
+                const filter = workKeys.map(k => `Ref_Key eq guid'${k}'`).join(' or ');
+                const resp = await fetch(`/proxy/odata/Catalog_Автоработы?$filter=${encodeURIComponent(filter)}&$format=json`);
+                const data = await resp.json();
+                (data.value || []).forEach(w => cache.works[w.Ref_Key] = w);
+            }
+
+            tbody.innerHTML = works.map((w, i) => {
+                const work = cache.works[w.Авторабота_Key] || { Description: '—' };
+                return `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${work.Description}</td>
+                        <td class="text-right">${w.Количество}</td>
+                        <td class="text-right">${(w.Цена || 0).toLocaleString('ru-RU')}</td>
+                        <td class="text-right">${(w.Сумма || 0).toLocaleString('ru-RU')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function renderParts(parts) {
+            const tbody = document.getElementById('parts-table');
+            if (parts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">Нет запчастей</td></tr>';
+                return;
+            }
+
+            // Загрузить названия запчастей
+            const partKeys = parts.map(p => p.Номенклатура_Key).filter(k => k && k !== '00000000-0000-0000-0000-000000000000');
+            if (partKeys.length > 0) {
+                const filter = partKeys.map(k => `Ref_Key eq guid'${k}'`).join(' or ');
+                const resp = await fetch(`/proxy/odata/Catalog_Номенклатура?$filter=${encodeURIComponent(filter)}&$format=json`);
+                const data = await resp.json();
+                (data.value || []).forEach(p => cache.parts[p.Ref_Key] = p);
+            }
+
+            tbody.innerHTML = parts.map((p, i) => {
+                const part = cache.parts[p.Номенклатура_Key] || { Description: '—' };
+                return `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${part.Description}</td>
+                        <td class="text-right">${p.Количество}</td>
+                        <td class="text-right">${(p.Цена || 0).toLocaleString('ru-RU')}</td>
+                        <td class="text-right">${(p.СуммаСкидкиСтроки || 0).toLocaleString('ru-RU')}</td>
+                        <td class="text-right">${(p.Сумма || 0).toLocaleString('ru-RU')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function backToList() {
+            document.getElementById('order-detail-section').style.display = 'none';
+            document.getElementById('orders-list-section').style.display = 'block';
+        }
+
+        function showSection(section) {
+            // TODO: реализовать переключение секций
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        async function createOrder() {
+            document.getElementById('orders-list-section').style.display = 'none';
+            document.getElementById('order-detail-section').style.display = 'none';
+            document.getElementById('create-order-section').style.display = 'block';
+
+            // Загрузить справочники для формы
+            await loadClientsForSelect();
+            await loadRepairTypes();
+        }
+
+        async function loadClientsForSelect() {
+            const select = document.getElementById('new-client');
+            select.innerHTML = '<option value="">Загрузка...</option>';
+
+            const resp = await fetch('/proxy/odata/Catalog_Контрагенты?$top=50&$filter=IsFolder eq false&$orderby=Description&$format=json');
+            const data = await resp.json();
+            const clients = data.value || [];
+
+            select.innerHTML = '<option value="">— Выберите клиента —</option>' +
+                clients.map(c => `<option value="${c.Ref_Key}">${c.Description}</option>`).join('');
+        }
+
+        async function loadRepairTypes() {
+            const select = document.getElementById('new-repair-type');
+            select.innerHTML = '<option value="">Загрузка...</option>';
+
+            const resp = await fetch('/proxy/odata/Catalog_ВидыРемонта?$format=json');
+            const data = await resp.json();
+            const types = data.value || [];
+
+            select.innerHTML = '<option value="">— Выберите вид ремонта —</option>' +
+                types.map(t => `<option value="${t.Ref_Key}">${t.Description}</option>`).join('');
+        }
+
+        async function onClientChange() {
+            const clientKey = document.getElementById('new-client').value;
+            const carSelect = document.getElementById('new-car');
+
+            if (!clientKey) {
+                carSelect.innerHTML = '<option value="">— Сначала выберите клиента —</option>';
+                return;
+            }
+
+            carSelect.innerHTML = '<option value="">Загрузка автомобилей...</option>';
+
+            // Загрузить автомобили клиента (через договоры или напрямую)
+            const resp = await fetch(`/proxy/odata/Catalog_Автомобили?$top=20&$filter=IsFolder eq false&$orderby=Description&$format=json`);
+            const data = await resp.json();
+            const cars = data.value || [];
+
+            carSelect.innerHTML = '<option value="">— Выберите автомобиль —</option>' +
+                cars.map(c => `<option value="${c.Ref_Key}">${c.Description} (${c.VIN || 'без VIN'})</option>`).join('');
+        }
+
+        async function submitNewOrder() {
+            const clientKey = document.getElementById('new-client').value;
+            const carKey = document.getElementById('new-car').value;
+            const repairTypeKey = document.getElementById('new-repair-type').value;
+            const mileage = document.getElementById('new-mileage').value;
+            const description = document.getElementById('new-description').value;
+
+            if (!clientKey) {
+                alert('Выберите клиента');
+                return;
+            }
+
+            document.getElementById('submit-order-btn').disabled = true;
+            document.getElementById('submit-order-btn').textContent = 'Создание...';
+
+            try {
+                // Получить организацию и другие обязательные поля
+                const orgResp = await fetch('/proxy/odata/Catalog_Организации?$top=1&$format=json');
+                const orgData = await orgResp.json();
+                const org = orgData.value?.[0];
+
+                const valResp = await fetch('/proxy/odata/Catalog_Валюты?$top=1&$format=json');
+                const valData = await valResp.json();
+                const val = valData.value?.[0];
+
+                // Создать заказ-наряд
+                const orderData = {
+                    Date: new Date().toISOString(),
+                    Контрагент_Key: clientKey,
+                    Организация_Key: org?.Ref_Key,
+                    ВалютаДокумента_Key: val?.Ref_Key,
+                    ВидРемонта_Key: repairTypeKey || undefined,
+                    Пробег: mileage || "0",
+                    ОписаниеПричиныОбращения: description || "Ремонт",
+                    Автомобили: carKey ? [{ Автомобиль_Key: carKey }] : []
+                };
+
+                const resp = await fetch('/proxy/odata/Document_ЗаказНаряд?$format=json', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.text();
+                    throw new Error(err);
+                }
+
+                const result = await resp.json();
+                alert('Заказ создан: №' + (result.Number || '').trim());
+
+                // Вернуться к списку и обновить
+                cancelCreate();
+                loadOrders();
+
+            } catch (e) {
+                alert('Ошибка создания: ' + e.message);
+            } finally {
+                document.getElementById('submit-order-btn').disabled = false;
+                document.getElementById('submit-order-btn').textContent = 'Создать заказ';
+            }
+        }
+
+        function cancelCreate() {
+            document.getElementById('create-order-section').style.display = 'none';
+            document.getElementById('orders-list-section').style.display = 'block';
+        }
+
+        // Init
+        loadOrders();
+    </script>
+</body>
+</html>

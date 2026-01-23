@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIPO-STO</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo">TIPO-STO</div>
+            <div class="nav-item" data-page="dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Дашборд</span>
+            </div>
+            <div class="nav-item active" data-page="orders">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Заказы</span>
+            </div>
+            <div class="nav-item" data-page="clients">
+                <span class="nav-icon">👥</span>
+                <span class="nav-text">Клиенты</span>
+            </div>
+            <div class="nav-item" data-page="cars">
+                <span class="nav-icon">🚗</span>
+                <span class="nav-text">Автомобили</span>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page hidden">
+                <div class="page-header">
+                    <h1>Дашборд</h1>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-orders-today">0</div>
+                        <div class="stat-label">Заказов сегодня</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-sum-today">0 ₽</div>
+                        <div class="stat-label">Выручка сегодня</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-in-progress">0</div>
+                        <div class="stat-label">В работе</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-clients">0</div>
+                        <div class="stat-label">Клиентов</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders List Page -->
+            <div id="page-orders" class="page">
+                <div class="page-header">
+                    <h1>Заказ-наряды</h1>
+                    <input type="text" class="search-input" id="orders-search" placeholder="🔍 Поиск...">
+                    <button class="btn btn-primary" onclick="App.showPage('clients')">+ Новый заказ</button>
+                </div>
+                <div class="card">
+                    <div id="orders-list" class="list-container">Загрузка...</div>
+                </div>
+            </div>
+
+            <!-- Clients List Page -->
+            <div id="page-clients" class="page hidden">
+                <div class="page-header">
+                    <h1>Клиенты</h1>
+                    <input type="text" class="search-input" id="clients-search" placeholder="🔍 Поиск...">
+                    <button class="btn btn-primary" onclick="App.openModal('new-client')">+ Новый клиент</button>
+                </div>
+                <div class="card">
+                    <div id="clients-list" class="list-container">Загрузка...</div>
+                </div>
+            </div>
+
+            <!-- Client Card Page -->
+            <div id="page-client-card" class="page hidden">
+                <div class="page-header">
+                    <button class="back-btn" onclick="App.showPage('clients')">← Назад</button>
+                    <h1 id="client-card-title">Клиент</h1>
+                    <div class="spacer"></div>
+                    <button class="btn btn-primary" onclick="App.showPage('order-form')">+ Новый заказ</button>
+                </div>
+                <div class="client-header-card card">
+                    <div class="client-header-content">
+                        <div class="client-avatar" id="client-card-avatar">?</div>
+                        <div class="client-header-info">
+                            <div class="client-name" id="client-card-name">—</div>
+                            <div class="client-type" id="client-card-type">—</div>
+                        </div>
+                    </div>
+                    <div class="client-stats">
+                        <div class="client-stat">
+                            <div class="client-stat-value" id="client-stat-orders">0</div>
+                            <div class="client-stat-label">Визитов</div>
+                        </div>
+                        <div class="client-stat">
+                            <div class="client-stat-value" id="client-stat-sum">0 ₽</div>
+                            <div class="client-stat-label">Сумма</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="client-details-grid">
+                    <div class="card">
+                        <div class="card-title">🚗 Автомобили</div>
+                        <div id="client-cars-list">Загрузка...</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">📝 Информация</div>
+                        <div class="info-row"><strong>ИНН:</strong> <span id="client-card-inn">—</span></div>
+                        <div class="info-row"><strong>Комментарий:</strong> <span id="client-card-comment">—</span></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">📋 История заказов</div>
+                    <div id="client-orders-list">Загрузка...</div>
+                </div>
+            </div>
+
+            <!-- Order Form Page -->
+            <div id="page-order-form" class="page hidden">
+                <div class="page-header">
+                    <button class="back-btn" onclick="App.showPage('client-card')">← Назад</button>
+                    <h1>Новый заказ-наряд</h1>
+                </div>
+                <div class="order-form-grid">
+                    <div class="card">
+                        <div class="card-title">👤 Клиент</div>
+                        <div id="order-form-client" class="order-form-info">Не выбран</div>
+                        <div class="card-title mt-20">🚗 Автомобиль</div>
+                        <div id="order-form-cars">Выберите автомобиль</div>
+                        <input type="hidden" id="selected-car-key">
+                    </div>
+                    <div class="card">
+                        <div class="card-title">📝 Данные заказа</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Вид ремонта</label>
+                                <select id="order-repair-type"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Цех</label>
+                                <select id="order-workshop"></select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Пробег (км)</label>
+                                <input type="number" id="order-mileage" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Мастер</label>
+                                <select id="order-master"></select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Причина обращения</label>
+                            <textarea id="order-reason" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title-row">
+                        <span>🔧 Работы</span>
+                        <button class="btn btn-primary btn-sm" onclick="App.openModal('works')">+ Добавить</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Наименование</th>
+                                <th>Кол-во</th>
+                                <th>Цена</th>
+                                <th>Сумма</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="works-table">
+                            <tr><td colspan="6" class="empty-row">Добавьте работы</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="table-summary">
+                        <span class="summary-label">Итого работы:</span>
+                        <span class="summary-value" id="works-sum">0 ₽</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title-row">
+                        <span>📦 Запчасти</span>
+                        <button class="btn btn-primary btn-sm" onclick="App.openModal('parts')">+ Добавить</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Наименование</th>
+                                <th>Кол-во</th>
+                                <th>Цена</th>
+                                <th>Скидка</th>
+                                <th>Сумма</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="parts-table">
+                            <tr><td colspan="7" class="empty-row">Добавьте запчасти</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="table-summary">
+                        <span class="summary-label">Итого запчасти:</span>
+                        <span class="summary-value" id="parts-sum">0 ₽</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="order-totals">
+                        <div class="total-row">
+                            <span class="total-label">Работы</span>
+                            <span class="total-value" id="total-works">0 ₽</span>
+                        </div>
+                        <div class="total-row">
+                            <span class="total-label">Запчасти</span>
+                            <span class="total-value" id="total-parts">0 ₽</span>
+                        </div>
+                        <div class="total-row total-main">
+                            <span class="total-label">ИТОГО</span>
+                            <span class="total-value" id="total-sum">0 ₽</span>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="App.showPage('client-card')">Отмена</button>
+                        <div class="spacer"></div>
+                        <button class="btn btn-primary" onclick="OrderForm.save()">✓ Создать заказ</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cars Page -->
+            <div id="page-cars" class="page hidden">
+                <div class="page-header">
+                    <h1>Автомобили</h1>
+                    <input type="text" class="search-input" id="cars-search" placeholder="🔍 Поиск по VIN или названию...">
+                </div>
+                <div class="card">
+                    <div id="cars-list" class="list-container">Загрузка...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Works Selection -->
+    <div id="modal-works" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <strong>Выбор работы</strong>
+                <button class="modal-close" onclick="App.closeModal('works')">✕</button>
+            </div>
+            <div class="modal-search">
+                <input type="text" placeholder="Поиск..." id="works-modal-search">
+            </div>
+            <div class="modal-body" id="works-modal-list">Загрузка...</div>
+        </div>
+    </div>
+
+    <!-- Modal: Parts Selection -->
+    <div id="modal-parts" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <strong>Выбор запчасти</strong>
+                <button class="modal-close" onclick="App.closeModal('parts')">✕</button>
+            </div>
+            <div class="modal-search">
+                <input type="text" placeholder="Поиск..." id="parts-modal-search">
+            </div>
+            <div class="modal-body" id="parts-modal-list">Загрузка...</div>
+        </div>
+    </div>
+
+    <!-- Modal: Car Selection -->
+    <div id="modal-car-select" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <strong>Выбор автомобиля</strong>
+                <button class="modal-close" onclick="App.closeModal('car-select')">✕</button>
+            </div>
+            <div class="modal-search">
+                <input type="text" placeholder="Поиск по VIN или названию..." id="car-select-modal-search">
+            </div>
+            <div class="modal-body" id="car-select-modal-list">Загрузка...</div>
+        </div>
+    </div>
+
+    <!-- Modal: New Client -->
+    <div id="modal-new-client" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <strong>Новый клиент</strong>
+                <button class="modal-close" onclick="App.closeModal('new-client')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Наименование *</label>
+                    <input type="text" id="new-client-name" placeholder="ФИО или название организации">
+                </div>
+                <div class="form-group">
+                    <label>ИНН</label>
+                    <input type="text" id="new-client-inn" placeholder="ИНН">
+                </div>
+                <div class="form-group">
+                    <label>Комментарий</label>
+                    <textarea id="new-client-comment" rows="2"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-secondary" onclick="App.closeModal('new-client')">Отмена</button>
+                    <button class="btn btn-primary" onclick="ClientsPage.createClient()">Создать</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/api.js"></script>
+    <script src="/js/state.js"></script>
+    <script src="/js/pages/dashboard.js"></script>
+    <script src="/js/pages/clients.js"></script>
+    <script src="/js/pages/orders.js"></script>
+    <script src="/js/pages/order-form.js"></script>
+    <script src="/js/pages/client-card.js"></script>
+    <script src="/js/pages/cars.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

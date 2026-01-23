@@ -1,3 +1,14 @@
+# TIPO-STO Dependencies
+
+# Web framework
 fastapi>=0.100.0
-uvicorn>=0.23.0
-pywin32>=306
+uvicorn[standard]>=0.23.0
+
+# HTTP client for OData
+httpx>=0.24.0
+
+# Data validation
+pydantic>=2.0.0
+
+# Environment variables (optional)
+python-dotenv>=1.0.0

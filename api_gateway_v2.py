@@ -112,12 +112,12 @@ def create_order(order: OrderCreate):
     try:
         base = get_1c_connection()
 
-        # Find client by code
+        # Find client by code (using Russian names for actual 1C)
         query = base.NewObject("Query")
         query.Text = f"""
-            SELECT Counterparty.Ref AS Ref
-            FROM Catalog.Counterparties AS Counterparty
-            WHERE Counterparty.Code = "{order.client_code}"
+            SELECT Контрагенты.Ref AS Ref
+            FROM Catalog.Контрагенты AS Контрагенты
+            WHERE Контрагенты.Code = "{order.client_code}"
         """
         result = query.Execute().Select()
 
@@ -128,11 +128,27 @@ def create_order(order: OrderCreate):
         if not client_ref:
             raise HTTPException(status_code=404, detail=f"Client with code {order.client_code} not found")
 
-        # Create new document
-        doc = base.Documents.WorkOrder.CreateDocument()
-        doc.Date = base.NewObject("Date")  # Current date
-        doc.Counterparty = client_ref
-        doc.Comment = order.comment
+        # Get first organization
+        org_query = base.NewObject("Query")
+        org_query.Text = "SELECT TOP 1 Организации.Ref AS Ref FROM Catalog.Организации AS Организации"
+        org_result = org_query.Execute().Select()
+
+        org_ref = None
+        if org_result.Next():
+            org_ref = org_result.Ref
+
+        if not org_ref:
+            raise HTTPException(status_code=500, detail="No organization found in database")
+
+        # Create new document (using Russian document name)
+        doc = base.Documents.ЗаказНаряд.CreateDocument()
+        doc.Date = base.CurrentDate()
+        doc.Организация = org_ref
+        doc.Контрагент = client_ref
+        doc.Комментарий = order.comment
+
+        # Generate unique number
+        doc.SetNewNumber()
 
         # Write document
         doc.Write()

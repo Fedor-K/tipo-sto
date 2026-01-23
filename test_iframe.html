@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>TIPO-STO: Тест iframe</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+
+        .header {
+            background: #2196F3;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .header h1 { font-size: 18px; }
+
+        .main { display: flex; flex: 1; overflow: hidden; }
+
+        .sidebar {
+            width: 220px;
+            background: #f5f5f5;
+            border-right: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            font-size: 12px;
+            color: #666;
+            margin: 15px 0 8px 0;
+            text-transform: uppercase;
+        }
+        .sidebar h3:first-child { margin-top: 0; }
+
+        .sidebar button {
+            display: block;
+            width: 100%;
+            padding: 10px 12px;
+            margin: 4px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .sidebar button:hover { background: #e3f2fd; border-color: #2196F3; }
+        .sidebar button.active { background: #2196F3; color: white; border-color: #2196F3; }
+
+        .content { flex: 1; display: flex; flex-direction: column; }
+
+        .toolbar {
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .toolbar .path { color: #666; font-size: 13px; }
+        .toolbar .reload {
+            padding: 5px 10px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .toolbar .reload:hover { background: #eee; }
+
+        .iframe-container { flex: 1; position: relative; }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+        }
+        .loading.hidden { display: none; }
+
+        .tipo-section {
+            padding: 30px;
+            background: white;
+            height: 100%;
+            overflow: auto;
+        }
+        .tipo-section h2 { margin-bottom: 20px; color: #333; }
+        .tipo-section .card {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .tipo-section table { width: 100%; border-collapse: collapse; }
+        .tipo-section th, .tipo-section td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .tipo-section th { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>TIPO-STO</h1>
+        <span style="opacity: 0.8; font-size: 13px;">Тест гибридного интерфейса (iframe)</span>
+    </div>
+
+    <div class="main">
+        <div class="sidebar">
+            <h3>TIPO-STO</h3>
+            <button onclick="showTipoSection('dashboard')" class="active">Дашборд</button>
+            <button onclick="showTipoSection('clients')">Клиенты (API)</button>
+
+            <h3>1С Интерфейс</h3>
+            <button onclick="open1C('e1cib/list/Catalog.Контрагенты')">Контрагенты</button>
+            <button onclick="open1C('e1cib/list/Catalog.Автомобили')">Автомобили</button>
+            <button onclick="open1C('e1cib/list/Document.ЗаказНаряд')">Заказ-наряды</button>
+            <button onclick="open1C('e1cib/list/Catalog.Номенклатура')">Номенклатура</button>
+            <button onclick="open1C('e1cib/list/Catalog.Сотрудники')">Сотрудники</button>
+
+            <h3>1С Отчёты</h3>
+            <button onclick="open1C('')">Главная 1С</button>
+        </div>
+
+        <div class="content">
+            <div class="toolbar">
+                <span class="path" id="current-path">TIPO-STO / Дашборд</span>
+                <button class="reload" onclick="reloadFrame()">↻ Обновить</button>
+            </div>
+
+            <div class="iframe-container">
+                <div class="loading" id="loading">
+                    Загрузка 1С...<br>
+                    <small>Если не загружается — авторизуйтесь в iframe</small>
+                </div>
+
+                <!-- TIPO-STO секции -->
+                <div id="tipo-dashboard" class="tipo-section">
+                    <h2>Дашборд</h2>
+                    <div class="card">
+                        <h3>Сегодня</h3>
+                        <p style="margin-top: 10px; color: #666;">Заказов: <strong>12</strong> | Выручка: <strong>156 000 ₽</strong></p>
+                    </div>
+                    <div class="card">
+                        <h3>Статус теста</h3>
+                        <p style="margin-top: 10px;">✅ Это собственный интерфейс TIPO-STO</p>
+                        <p>✅ Данные получаем через OData API</p>
+                        <p>✅ Сложные функции — в iframe 1С (меню слева)</p>
+                    </div>
+                </div>
+
+                <div id="tipo-clients" class="tipo-section" style="display: none;">
+                    <h2>Клиенты (данные через API)</h2>
+                    <div class="card">
+                        <p>Загрузка...</p>
+                    </div>
+                    <table id="clients-table">
+                        <thead>
+                            <tr><th>Имя</th><th>ИНН</th><th>Действия</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- iframe для 1С -->
+                <iframe id="frame1c" style="display: none;" onload="onFrameLoad()"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_1C = 'https://aclient.1c-hosting.com/1R96614/1R96614_AA61AS_e771ys34or/ru_RU/';
+        let currentSection = 'dashboard';
+
+        function showTipoSection(section) {
+            // Скрыть всё
+            document.getElementById('frame1c').style.display = 'none';
+            document.getElementById('tipo-dashboard').style.display = 'none';
+            document.getElementById('tipo-clients').style.display = 'none';
+            document.getElementById('loading').classList.add('hidden');
+
+            // Показать нужную секцию
+            if (section === 'dashboard') {
+                document.getElementById('tipo-dashboard').style.display = 'block';
+                document.getElementById('current-path').textContent = 'TIPO-STO / Дашборд';
+            } else if (section === 'clients') {
+                document.getElementById('tipo-clients').style.display = 'block';
+                document.getElementById('current-path').textContent = 'TIPO-STO / Клиенты';
+                loadClients();
+            }
+
+            // Обновить активную кнопку
+            document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            currentSection = section;
+        }
+
+        function open1C(path) {
+            // Скрыть TIPO-STO секции
+            document.getElementById('tipo-dashboard').style.display = 'none';
+            document.getElementById('tipo-clients').style.display = 'none';
+
+            // Показать iframe
+            const frame = document.getElementById('frame1c');
+            const loading = document.getElementById('loading');
+
+            frame.style.display = 'block';
+            loading.classList.remove('hidden');
+
+            // Установить URL
+            const url = BASE_1C + (path ? '#' + path : '');
+            frame.src = url;
+
+            // Обновить путь
+            const pathName = path ? path.split('.').pop() : 'Главная';
+            document.getElementById('current-path').textContent = '1С / ' + pathName;
+
+            // Обновить активную кнопку
+            document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            currentSection = '1c';
+        }
+
+        function onFrameLoad() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        function reloadFrame() {
+            if (currentSection === '1c') {
+                const frame = document.getElementById('frame1c');
+                frame.src = frame.src;
+            } else if (currentSection === 'clients') {
+                loadClients();
+            }
+        }
+
+        async function loadClients() {
+            const tbody = document.querySelector('#clients-table tbody');
+            tbody.innerHTML = '<tr><td colspan="3">Загрузка...</td></tr>';
+
+            try {
+                const resp = await fetch('/proxy/odata/Catalog_Контрагенты?$top=10&$select=Ref_Key,Description,ИНН&$filter=IsFolder eq false');
+                const data = await resp.json();
+
+                if (data.value && data.value.length > 0) {
+                    tbody.innerHTML = data.value.map(c => `
+                        <tr>
+                            <td>${c.Description || '—'}</td>
+                            <td>${c.ИНН || '—'}</td>
+                            <td>
+                                <button onclick="openClient1C('${c.Ref_Key}')" style="padding: 5px 10px; cursor: pointer;">
+                                    Открыть в 1С
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="3">Ошибка: ' + e.message + '</td></tr>';
+            }
+        }
+
+        function openClient1C(refKey) {
+            document.getElementById('tipo-clients').style.display = 'none';
+
+            const frame = document.getElementById('frame1c');
+            frame.style.display = 'block';
+            document.getElementById('loading').classList.remove('hidden');
+
+            // Формат для открытия конкретного элемента
+            frame.src = BASE_1C + '#e1cib/data/Catalog.Контрагенты?ref=' + refKey;
+            document.getElementById('current-path').textContent = '1С / Карточка контрагента';
+            currentSection = '1c';
+        }
+    </script>
+</body>
+</html>
