@@ -514,12 +514,13 @@ async def create_order(order: OrderCreate):
                 works_list.append(work_item)
 
                 # Если указан исполнитель - добавляем в табличную часть Исполнители
+                # Используем цех сотрудника (DEFAULTS["workshop"]), а не цех заказа
                 if w.executor:
                     executors_list.append({
                         "LineNumber": str(len(executors_list) + 1),
                         "ИдентификаторРаботы": work_id,
                         "Исполнитель_Key": w.executor,
-                        "Цех_Key": order.workshop_key or DEFAULTS["workshop"],
+                        "Цех_Key": DEFAULTS["workshop"],  # Цех к которому привязаны исполнители
                         "Процент": 100.0
                     })
             doc["Автоработы"] = works_list
