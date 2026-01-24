@@ -430,168 +430,167 @@ class OrderCreate(BaseModel):
 
 @app.post("/api/orders/create")
 async def create_order(order: OrderCreate):
-    """Создать заказ-наряд в Rent1C"""
+    """Создать заявку на ремонт в Rent1C"""
     try:
         # Получаем договор клиента
         contracts = await odata_get(f"Catalog_ДоговорыВзаиморасчетов?$filter=Owner_Key eq guid'{order.client_key}'&$top=1&$format=json")
         contract_key = contracts.get("value", [{}])[0].get("Ref_Key") if contracts.get("value") else None
 
-        # Формируем документ
-        doc = {
-            "Date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "Posted": False,
+        # Получаем данные клиента (телефон, email)
+        client_data = await odata_get(f"Catalog_Контрагенты(guid'{order.client_key}')?$format=json")
+        client_phone = ""
+        client_email = ""
+        # Пробуем получить контактную информацию
+        try:
+            contacts = await odata_get(f"Catalog_Контрагенты(guid'{order.client_key}')/КонтактнаяИнформация?$format=json")
+            for c in contacts.get("value", []):
+                if "телефон" in c.get("Тип", "").lower() or "phone" in c.get("Тип", "").lower():
+                    client_phone = c.get("Представление", "") or c.get("НомерТелефона", "")
+                if "почт" in c.get("Тип", "").lower() or "mail" in c.get("Тип", "").lower():
+                    client_email = c.get("Представление", "") or c.get("АдресЭП", "")
+        except Exception:
+            pass
+
+        # Получаем данные автомобиля (VIN, гос.номер, модель)
+        car_vin = ""
+        car_plate = ""
+        car_model_key = "00000000-0000-0000-0000-000000000000"
+        if order.car_key:
+            car_data = await odata_get(f"Catalog_Автомобили(guid'{order.car_key}')?$format=json")
+            car_vin = car_data.get("VIN", "") or ""
+            car_plate = car_data.get("ГосНомер", "") or ""
+            car_model_key = car_data.get("Модель_Key", "00000000-0000-0000-0000-000000000000")
+
+        now = datetime.now()
+
+        # Создаём заявку на ремонт (основной документ!)
+        # Минимальный набор полей - как в успешно созданных заявках
+        request_doc = {
+            "Date": now.strftime("%Y-%m-%dT%H:%M:%S"),
+            "Posted": True,
             "Организация_Key": DEFAULTS["org"],
             "ПодразделениеКомпании_Key": DEFAULTS["division"],
+            # Заказчик и автомобиль - ключевые поля
+            "Заказчик_Key": order.client_key,
+            "Автомобиль_Key": order.car_key or "00000000-0000-0000-0000-000000000000",
+            # Данные автомобиля (для отображения)
+            "VIN": car_vin,
+            "ГосНомер": car_plate,
+            # Параметры работы
+            "ВидРемонта_Key": order.repair_type_key or DEFAULTS["repair_type"],
+            "Цех_Key": order.workshop_key or DEFAULTS["workshop"],
             "ТипЦен_Key": DEFAULTS["price_type"],
             "ТипЦенРабот_Key": DEFAULTS["price_type"],
-            "ВидРемонта_Key": order.repair_type_key or DEFAULTS["repair_type"],
-            "Состояние_Key": order.status_key or DEFAULTS["status"],
-            "Цех_Key": order.workshop_key or DEFAULTS["workshop"],
-            "Мастер_Key": order.master_key or DEFAULTS["master"],
-            "Менеджер_Key": DEFAULTS["manager"],
-            "Автор_Key": DEFAULTS["author"],
             "ВалютаДокумента_Key": DEFAULTS["currency"],
-            "ХозОперация_Key": DEFAULTS["operation"],
-            "СкладКомпании_Key": DEFAULTS["warehouse"],
-            "СводныйРемонтныйЗаказ_Key": DEFAULTS["repair_order"],
-            "Контрагент_Key": order.client_key,
             "КурсДокумента": 1,
-            "КурсВалютыВзаиморасчетов": 1,
-            "РегламентированныйУчет": True,
-            "ЗакрыватьЗаказыТолькоПоДанномуЗаказНаряду": True,
-            "СпособЗачетаАвансов": "Автоматически",
+            "Автор_Key": DEFAULTS["author"],
+            # Причина обращения
+            "ОписаниеПричиныОбращения": order.comment or "Заявка из TIPO-STO",
+            "Состояние": "НеУказано",
         }
 
-        # Диспетчер
-        if order.dispatcher_key:
-            doc["Диспетчер_Key"] = order.dispatcher_key
-
-        if contract_key:
-            doc["ДоговорВзаиморасчетов_Key"] = contract_key
-
-        if order.comment:
-            doc["ОписаниеПричиныОбращения"] = order.comment
-
+        # Пробег
         if order.mileage:
-            doc["Пробег"] = order.mileage
+            request_doc["Пробег"] = str(order.mileage)
 
-        # Следующее ТО
-        if order.next_to:
-            doc["СледующееТО"] = int(order.next_to)
+        # Модель автомобиля (если есть)
+        if car_model_key and car_model_key != "00000000-0000-0000-0000-000000000000":
+            request_doc["Модель_Key"] = car_model_key
 
-        # Даты
+        # Контактная информация (если есть)
+        if client_phone:
+            request_doc["ПредставлениеТелефона"] = client_phone
+            request_doc["ПредставлениеТелефонаСтрокой"] = client_phone
+        if client_email:
+            request_doc["АдресЭлектроннойПочты"] = client_email
+            request_doc["АдресЭлектроннойПочтыСтрокой"] = client_email
+
+        # Мастер и диспетчер (опционально)
+        if order.master_key:
+            request_doc["Мастер_Key"] = order.master_key
+        if order.dispatcher_key:
+            request_doc["Диспетчер_Key"] = order.dispatcher_key
+
+        # Даты начала/окончания работ (опционально)
         if order.date_start:
-            doc["ДатаНачала"] = order.date_start + "T00:00:00"
+            request_doc["ДатаНачала"] = order.date_start + "T09:00:00"
         if order.date_end:
-            doc["ДатаОкончания"] = order.date_end + "T00:00:00"
-        if order.date_issue:
-            doc["ДатаВыдачиПлан"] = order.date_issue + "T00:00:00"
-        if order.date_close:
-            doc["ДатаЗакрытия"] = order.date_close + "T00:00:00"
+            request_doc["ДатаОкончания"] = order.date_end + "T18:00:00"
 
-        # Добавляем автомобиль в табличную часть
-        if order.car_key:
-            doc["Автомобили"] = [{"LineNumber": "1", "Автомобиль_Key": order.car_key}]
-
-        # Добавляем работы в табличную часть Автоработы
-        # и собираем исполнителей для отдельной табличной части
+        # Табличная часть Автоработы (минимальный набор полей)
         executors_list = []
+        sum_works = 0
         if order.works:
             works_list = []
             for i, w in enumerate(order.works):
                 line_num = i + 1
-                work_id = str(line_num)  # ИдентификаторРаботы для связи с исполнителем
+                work_id = str(line_num)
+                work_sum = w.qty * w.price
+                sum_works += work_sum
 
-                work_item = {
+                works_list.append({
                     "LineNumber": str(line_num),
                     "Авторабота_Key": w.ref,
                     "ИдентификаторРаботы": work_id,
-                    "Количество": w.qty,
-                    "Цена": w.price,
-                    "Сумма": w.qty * w.price,
+                    "Количество": int(w.qty),
+                    "Коэффициент": 0,
+                    "Цена": int(w.price),
+                    "Сумма": int(work_sum),
                     "СпособРасчетаСтоимостиРаботы": "ФиксированнойСуммой"
-                }
-                works_list.append(work_item)
+                })
 
-                # Если указан исполнитель - добавляем в табличную часть Исполнители
-                # Используем цех сотрудника (DEFAULTS["workshop"]), а не цех заказа
+                # Если указан исполнитель
                 if w.executor:
                     executors_list.append({
                         "LineNumber": str(len(executors_list) + 1),
                         "ИдентификаторРаботы": work_id,
                         "Исполнитель_Key": w.executor,
-                        "Цех_Key": DEFAULTS["workshop"],  # Цех к которому привязаны исполнители
-                        "Процент": 100.0
+                        "Цех_Key": DEFAULTS["workshop"],
+                        "Процент": 100
                     })
-            doc["Автоработы"] = works_list
 
-        # Вспомогательные автоработы
-        if order.aux_works:
-            aux_list = []
-            for i, w in enumerate(order.aux_works):
-                aux_item = {
-                    "LineNumber": str(i + 1),
-                    "Авторабота_Key": w.ref,
-                    "Количество": w.qty,
-                    "Цена": w.price,
-                    "Сумма": w.qty * w.price,
-                    "СпособРасчетаСтоимостиРаботы": "ФиксированнойСуммой"
-                }
-                aux_list.append(aux_item)
-            doc["ВспомогательныеАвтоработы"] = aux_list
+            request_doc["Автоработы"] = works_list
 
-        # Товары
+        # Исполнители
+        if executors_list:
+            request_doc["Исполнители"] = executors_list
+
+        # Табличная часть Товары
+        sum_goods = 0
         if order.goods:
             goods_list = []
             for i, g in enumerate(order.goods):
+                goods_sum = g.qty * g.price
+                sum_goods += goods_sum
                 goods_list.append({
                     "LineNumber": str(i + 1),
                     "Номенклатура_Key": g.ref,
                     "Количество": g.qty,
                     "Цена": g.price,
-                    "Сумма": g.qty * g.price
+                    "Сумма": goods_sum,
+                    "СкладКомпании_Key": DEFAULTS["warehouse"]
                 })
-            doc["Товары"] = goods_list
+            request_doc["Товары"] = goods_list
 
-        # Материалы (со склада)
-        if order.materials:
-            mat_list = []
-            for i, m in enumerate(order.materials):
-                mat_list.append({
-                    "LineNumber": str(i + 1),
-                    "Номенклатура_Key": m.ref,
-                    "Количество": m.qty,
-                    "Цена": m.price,
-                    "Сумма": m.qty * m.price
-                })
-            doc["Материалы"] = mat_list
+        # Общая сумма документа
+        total = sum_works + sum_goods
 
-        # Материалы заказчика
-        if order.customer_materials:
-            cust_mat_list = []
-            for i, m in enumerate(order.customer_materials):
-                cust_mat_list.append({
-                    "LineNumber": str(i + 1),
-                    "Номенклатура_Key": m.ref,
-                    "Количество": m.qty
-                })
-            doc["МатериалыЗаказчика"] = cust_mat_list
+        # Создаём ЗаявкаНаРемонт
+        request_result = await odata_post("Document_ЗаявкаНаРемонт?$format=json", request_doc)
 
-        # Добавляем исполнителей (собранных из работ)
-        if executors_list:
-            doc["Исполнители"] = executors_list
+        if "odata.error" in request_result:
+            return {"success": False, "error": request_result["odata.error"]["message"]["value"], "type": "ЗаявкаНаРемонт"}
 
-        # Создаём
-        result = await odata_post("Document_ЗаказНаряд?$format=json", doc)
-
-        if "odata.error" in result:
-            return {"success": False, "error": result["odata.error"]["message"]["value"]}
-
+        # Возвращаем данные созданной ЗаявкаНаРемонт
         return {
             "success": True,
-            "number": result.get("Number", "").strip(),
-            "ref": result.get("Ref_Key", ""),
-            "date": str(result.get("Date", ""))[:10]
+            "type": "ЗаявкаНаРемонт",
+            "number": request_result.get("Number", "").strip(),
+            "ref": request_result.get("Ref_Key", ""),
+            "date": str(request_result.get("Date", ""))[:10],
+            "client": order.client_name,
+            "car": order.car_name,
+            "sum": total
         }
 
     except Exception as e:
