@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIPO-STO - Создание заказ-наряда</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .header h1 { font-size: 20px; font-weight: 600; }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+        }
+        .nav-tab {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-tab:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        .nav-tab.active {
+            background: white;
+            color: #1d4ed8;
+        }
+
+        .container { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body { padding: 20px; }
+
+        .search-box { position: relative; }
+        .search-box input {
+            width: 100%;
+            padding: 14px 16px 14px 44px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        .search-box input:focus { outline: none; border-color: #2563eb; }
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .results {
+            margin-top: 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            display: none;
+        }
+        .results.show { display: block; }
+
+        .result-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .result-item:hover { background: #f0f7ff; }
+        .result-item:last-child { border-bottom: none; }
+        .result-item .name { font-weight: 500; color: #111827; }
+        .result-item .meta { font-size: 13px; color: #6b7280; margin-top: 3px; }
+
+        .selected {
+            background: #eff6ff;
+            border: 2px solid #2563eb;
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .selected.show { display: flex; }
+        .selected .name { font-weight: 600; color: #1d4ed8; }
+        .selected .meta { font-size: 13px; color: #6b7280; margin-top: 2px; }
+        .selected .remove {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #9ca3af;
+            padding: 4px 8px;
+        }
+        .selected .remove:hover { color: #ef4444; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        .form-group textarea, .form-group input[type="text"], .form-group input[type="date"], .form-group select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            background: white;
+        }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .form-group textarea:focus, .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        .form-row {
+            display: flex;
+            gap: 16px;
+        }
+        .form-group.half {
+            flex: 1;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+        .btn-primary:disabled { background: #d1d5db; cursor: not-allowed; }
+
+        .success {
+            background: #ecfdf5;
+            border: 2px solid #10b981;
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            display: none;
+        }
+        .success.show { display: block; }
+        .success .icon { font-size: 56px; margin-bottom: 16px; }
+        .success h3 { color: #065f46; font-size: 20px; margin-bottom: 8px; }
+        .success .order-num {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2563eb;
+            margin: 16px 0;
+        }
+        .success p { color: #6b7280; margin-bottom: 24px; }
+
+        .loading { text-align: center; padding: 16px; color: #6b7280; }
+
+        .client-cars {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+            display: none;
+        }
+        .client-cars.show { display: block; }
+        .client-cars h4 { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+        .car-chip {
+            display: inline-block;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s;
+        }
+        .car-chip:hover { border-color: #2563eb; background: #eff6ff; }
+        .car-chip.selected { border-color: #2563eb; background: #eff6ff; }
+
+        .client-history {
+            margin-top: 16px;
+            display: none;
+        }
+        .client-history.show { display: block; }
+
+        .history-section {
+            margin-bottom: 16px;
+        }
+        .history-section h4 {
+            font-size: 14px;
+            color: #374151;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .cars-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .order-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+        .order-item .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .order-item .order-number {
+            font-weight: 600;
+            color: #2563eb;
+        }
+        .order-item .order-date {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .order-item .order-car {
+            font-size: 13px;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+        .order-item .order-comment {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .order-item .order-sum {
+            font-weight: 600;
+            color: #059669;
+        }
+
+        .history-stats {
+            background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        .stat-item .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1d4ed8;
+        }
+        .stat-item .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+
+        .no-data {
+            color: #9ca3af;
+            font-size: 13px;
+            padding: 8px;
+        }
+
+        .order-item {
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .order-item:hover {
+            background: #f0f7ff;
+            border-color: #2563eb;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            border-radius: 16px 16px 0 0;
+        }
+        .modal-header h2 {
+            font-size: 18px;
+            color: #1d4ed8;
+        }
+        .modal-header .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #9ca3af;
+            padding: 4px;
+        }
+        .modal-header .close-btn:hover {
+            color: #374151;
+        }
+        .modal-body {
+            padding: 24px;
+        }
+        .modal-section {
+            margin-bottom: 20px;
+        }
+        .modal-section h4 {
+            font-size: 13px;
+            color: #6b7280;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .modal-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .modal-info-item {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .modal-info-item .label {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .modal-info-item .value {
+            font-weight: 600;
+            color: #111827;
+            margin-top: 2px;
+        }
+        .modal-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .modal-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f9fafb;
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 600;
+        }
+        .modal-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 14px;
+        }
+        .modal-table .sum {
+            font-weight: 600;
+            color: #059669;
+        }
+        .modal-total {
+            background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+            padding: 16px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-total .label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .modal-total .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1d4ed8;
+        }
+        .empty-section {
+            color: #9ca3af;
+            font-size: 14px;
+            padding: 12px;
+            text-align: center;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        /* Client Card Styles */
+        .client-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .client-info-item {
+            background: #f9fafb;
+            padding: 12px 16px;
+            border-radius: 8px;
+        }
+        .client-info-item .label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        .client-info-item .value {
+            font-weight: 600;
+            color: #111827;
+        }
+        .client-info-item.full {
+            grid-column: span 2;
+        }
+
+        .client-stats-big {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .client-stats-big .stat-card {
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .client-stats-big .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1d4ed8;
+        }
+        .client-stats-big .stat-label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .car-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .car-card:hover {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+        .car-card .car-name {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+        .car-card .car-meta {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #9ca3af;
+        }
+        .close-btn:hover {
+            color: #374151;
+        }
+
+        /* Works selection */
+        .selected-works {
+            margin-top: 12px;
+        }
+        .work-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .work-item .work-info {
+            flex: 1;
+        }
+        .work-item .work-name {
+            font-weight: 500;
+            color: #111827;
+        }
+        .work-item .work-price {
+            font-size: 13px;
+            color: #059669;
+            font-weight: 600;
+        }
+        .work-item .work-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 16px;
+        }
+        .work-item .work-field {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .work-item .work-field label {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .work-item .work-field input {
+            width: 80px;
+            padding: 6px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .work-item .work-field input:focus {
+            border-color: #2563eb;
+            outline: none;
+        }
+        .work-item .remove-work {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .work-item .remove-work:hover {
+            color: #ef4444;
+        }
+        .result-item .price {
+            color: #059669;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        /* Form Tabs */
+        .form-tabs {
+            display: flex;
+            gap: 4px;
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+        .form-tab {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 16px;
+            border: none;
+            background: #f3f4f6;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .form-tab:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .form-tab.active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+        }
+        .form-tab .badge {
+            background: rgba(255,255,255,0.3);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        .form-tab.active .badge {
+            background: rgba(255,255,255,0.3);
+        }
+        .form-tab-content {
+            display: none;
+        }
+        .form-tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>TIPO-STO</h1>
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('orders')">Заказы</button>
+            <button class="nav-tab" onclick="showTab('clients')">Клиенты</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- ===================== TAB: КЛИЕНТЫ ===================== -->
+        <div id="clientsTab" class="tab-content" style="display: none;">
+            <div class="card">
+                <div class="card-header">👥 Клиенты</div>
+                <div class="card-body">
+                    <div class="search-box">
+                        <input type="text" id="clientsSearch" placeholder="Поиск клиента по фамилии..." autocomplete="off">
+                    </div>
+                    <div class="results" id="clientsResults"></div>
+                </div>
+            </div>
+
+            <!-- Карточка выбранного клиента -->
+            <div id="clientCard" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <span>👤 <span id="clientCardName">Клиент</span></span>
+                        <button class="close-btn" onclick="closeClientCard()" style="margin-left:auto">&times;</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="client-info-grid" id="clientCardInfo"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">🚗 Автомобили клиента</div>
+                    <div class="card-body">
+                        <div id="clientCardCars" class="cars-grid"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">📋 История заказов</div>
+                    <div class="card-body">
+                        <div id="clientCardOrders"></div>
+                    </div>
+                </div>
+
+                <div class="client-stats-big" id="clientCardStats"></div>
+            </div>
+        </div>
+
+        <!-- ===================== TAB: ЗАКАЗЫ ===================== -->
+        <div id="ordersTab" class="tab-content">
+        <div class="success" id="success">
+            <div class="icon">✅</div>
+            <h3>Заказ-наряд создан!</h3>
+            <div class="order-num" id="orderNum"></div>
+            <p id="orderInfo"></p>
+            <button class="btn btn-primary" onclick="resetForm()">Создать ещё</button>
+        </div>
+
+        <div id="form">
+            <!-- Form Tabs Navigation -->
+            <div class="form-tabs">
+                <button class="form-tab active" onclick="showFormTab('main')">Основное</button>
+                <button class="form-tab" onclick="showFormTab('works')">Работы <span class="badge" id="worksBadge">0</span></button>
+                <button class="form-tab" onclick="showFormTab('goods')">Товары <span class="badge" id="goodsBadge">0</span></button>
+            </div>
+
+            <!-- TAB: Основное -->
+            <div id="formTabMain" class="form-tab-content active">
+                <!-- Клиент -->
+                <div class="card">
+                    <div class="card-header">👤 Клиент</div>
+                    <div class="card-body">
+                        <div class="selected" id="clientSelected">
+                            <div>
+                                <div class="name" id="clientName"></div>
+                                <div class="meta" id="clientMeta"></div>
+                            </div>
+                            <button class="remove" onclick="clearClient()">✕</button>
+                        </div>
+                        <div id="clientSearchWrap">
+                            <div class="search-box">
+                                <input type="text" id="clientSearch" placeholder="Введите имя клиента..." autocomplete="off">
+                            </div>
+                            <div class="results" id="clientResults"></div>
+                        </div>
+
+                        <!-- История клиента -->
+                        <div class="client-history" id="clientHistory">
+                            <div class="history-section">
+                                <h4>🚗 Автомобили</h4>
+                                <div id="carsList" class="cars-grid"></div>
+                            </div>
+                            <div class="history-section">
+                                <h4>📋 История заказов</h4>
+                                <div id="ordersList"></div>
+                            </div>
+                            <div class="history-stats" id="clientStats"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Автомобиль -->
+                <div class="card">
+                    <div class="card-header">🚗 Автомобиль</div>
+                    <div class="card-body">
+                        <div class="selected" id="carSelected">
+                            <div>
+                                <div class="name" id="carName"></div>
+                                <div class="meta" id="carMeta"></div>
+                            </div>
+                            <button class="remove" onclick="clearCar()">✕</button>
+                        </div>
+                        <div id="carSearchWrap">
+                            <div class="search-box">
+                                <input type="text" id="carSearch" placeholder="Поиск по VIN, госномеру или марке..." autocomplete="off">
+                            </div>
+                            <div class="results" id="carResults"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Описание ремонта -->
+                <div class="card">
+                    <div class="card-header">🔧 Описание ремонта</div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Состояние</label>
+                                <select id="status">
+                                    <option value="">Загрузка...</option>
+                                </select>
+                            </div>
+                            <div class="form-group half">
+                                <label>Вид ремонта</label>
+                                <select id="repairType">
+                                    <option value="">Загрузка...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Цех</label>
+                                <select id="workshop">
+                                    <option value="">Загрузка...</option>
+                                </select>
+                            </div>
+                            <div class="form-group half">
+                                <label>Мастер</label>
+                                <select id="master">
+                                    <option value="">Загрузка...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Диспетчер</label>
+                            <select id="dispatcher">
+                                <option value="">— не выбран —</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Пробег и даты -->
+                <div class="card">
+                    <div class="card-header">📅 Пробег и сроки</div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Текущий пробег (км)</label>
+                                <input type="text" id="mileage" placeholder="125000">
+                            </div>
+                            <div class="form-group half">
+                                <label>Следующее ТО (км)</label>
+                                <input type="text" id="nextTo" placeholder="135000">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Дата начала</label>
+                                <input type="date" id="dateStart">
+                            </div>
+                            <div class="form-group half">
+                                <label>Дата окончания</label>
+                                <input type="date" id="dateEnd">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label>Выдача (план)</label>
+                                <input type="date" id="dateIssue">
+                            </div>
+                            <div class="form-group half">
+                                <label>Закрытие</label>
+                                <input type="date" id="dateClose">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Причина обращения -->
+                <div class="card">
+                    <div class="card-header">📋 Причина обращения</div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <textarea id="comment" placeholder="Опишите проблему или причину визита..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Работы -->
+            <div id="formTabWorks" class="form-tab-content">
+                <!-- Автоработы -->
+                <div class="card">
+                    <div class="card-header">🔧 Автоработы</div>
+                    <div class="card-body">
+                        <div class="search-box">
+                            <input type="text" id="workSearch" placeholder="Поиск работы..." autocomplete="off">
+                        </div>
+                        <div class="results" id="workResults"></div>
+                        <div id="selectedWorks" class="selected-works"></div>
+                    </div>
+                </div>
+
+                <!-- Вспомогательные автоработы -->
+                <div class="card">
+                    <div class="card-header">🔧 Вспомогательные автоработы</div>
+                    <div class="card-body">
+                        <div class="search-box">
+                            <input type="text" id="auxWorkSearch" placeholder="Поиск вспомогательной работы..." autocomplete="off">
+                        </div>
+                        <div class="results" id="auxWorkResults"></div>
+                        <div id="selectedAuxWorks" class="selected-works"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TAB: Товары -->
+            <div id="formTabGoods" class="form-tab-content">
+                <!-- Товары -->
+                <div class="card">
+                    <div class="card-header">📦 Товары</div>
+                    <div class="card-body">
+                        <div class="search-box">
+                            <input type="text" id="goodsSearch" placeholder="Поиск товара/запчасти..." autocomplete="off">
+                        </div>
+                        <div class="results" id="goodsResults"></div>
+                        <div id="selectedGoods" class="selected-works"></div>
+                    </div>
+                </div>
+
+                <!-- Материалы -->
+                <div class="card">
+                    <div class="card-header">🛠 Материалы (со склада)</div>
+                    <div class="card-body">
+                        <div class="search-box">
+                            <input type="text" id="materialsSearch" placeholder="Поиск материала..." autocomplete="off">
+                        </div>
+                        <div class="results" id="materialsResults"></div>
+                        <div id="selectedMaterials" class="selected-works"></div>
+                    </div>
+                </div>
+
+                <!-- Материалы заказчика -->
+                <div class="card">
+                    <div class="card-header">📋 Материалы заказчика</div>
+                    <div class="card-body">
+                        <div class="search-box">
+                            <input type="text" id="custMaterialsSearch" placeholder="Поиск материала заказчика..." autocomplete="off">
+                        </div>
+                        <div class="results" id="custMaterialsResults"></div>
+                        <div id="selectedCustMaterials" class="selected-works"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="submitBtn" onclick="createOrder()" disabled>
+                Создать заказ-наряд
+            </button>
+        </div>
+        </div><!-- /ordersTab -->
+    </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal-overlay" id="orderModal" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modalTitle">Заказ-наряд</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="loading">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '';
+        let client = null;
+        let car = null;
+        let selectedWorks = []; // Автоработы
+        let selectedAuxWorks = []; // Вспомогательные автоработы
+        let selectedGoods = []; // Товары
+        let selectedMaterials = []; // Материалы
+        let selectedCustMaterials = []; // Материалы заказчика
+        let employeesList = []; // Список сотрудников для выбора
+
+        // Загрузка справочников при старте
+        async function loadReferences() {
+            // Состояния
+            fetch(`${API}/api/ref/statuses`).then(r => r.json()).then(data => {
+                const sel = document.getElementById('status');
+                sel.innerHTML = data.map(i => `<option value="${i.ref}">${i.name}</option>`).join('');
+            });
+
+            // Виды ремонта
+            fetch(`${API}/api/ref/repair_types`).then(r => r.json()).then(data => {
+                const sel = document.getElementById('repairType');
+                sel.innerHTML = data.map(i => `<option value="${i.ref}">${i.name}</option>`).join('');
+            });
+
+            // Цеха
+            fetch(`${API}/api/ref/workshops`).then(r => r.json()).then(data => {
+                const sel = document.getElementById('workshop');
+                sel.innerHTML = data.map(i => `<option value="${i.ref}">${i.name}</option>`).join('');
+            });
+
+            // Сотрудники (мастера, диспетчеры)
+            fetch(`${API}/api/ref/employees`).then(r => r.json()).then(data => {
+                employeesList = data;
+                const masterSel = document.getElementById('master');
+                const dispSel = document.getElementById('dispatcher');
+                const opts = data.map(i => `<option value="${i.ref}">${i.name}</option>`).join('');
+                masterSel.innerHTML = opts;
+                dispSel.innerHTML = '<option value="">— не выбран —</option>' + opts;
+            });
+        }
+
+        loadReferences();
+
+        // === Навигация по табам ===
+        function showTab(tabName) {
+            // Скрыть все табы
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+
+            // Показать выбранный таб
+            document.getElementById(tabName + 'Tab').style.display = 'block';
+            event.target.classList.add('active');
+        }
+
+        // === Навигация по табам формы ===
+        function showFormTab(tabName) {
+            // Скрыть все табы формы
+            document.querySelectorAll('.form-tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.form-tab').forEach(btn => btn.classList.remove('active'));
+
+            // Показать выбранный таб
+            const tabMap = {
+                'main': 'formTabMain',
+                'works': 'formTabWorks',
+                'goods': 'formTabGoods'
+            };
+            document.getElementById(tabMap[tabName]).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Обновление бейджей на табах
+        function updateFormBadges() {
+            const worksCount = selectedWorks.length + selectedAuxWorks.length;
+            const goodsCount = selectedGoods.length + selectedMaterials.length + selectedCustMaterials.length;
+
+            document.getElementById('worksBadge').textContent = worksCount;
+            document.getElementById('goodsBadge').textContent = goodsCount;
+        }
+
+        // === TAB: КЛИЕНТЫ ===
+        let clientsSearchTimeout;
+        document.getElementById('clientsSearch').addEventListener('input', e => {
+            clearTimeout(clientsSearchTimeout);
+            const q = e.target.value.trim();
+            if (q.length < 2) {
+                document.getElementById('clientsResults').classList.remove('show');
+                return;
+            }
+            clientsSearchTimeout = setTimeout(() => searchClientsTab(q), 300);
+        });
+
+        async function searchClientsTab(q) {
+            const el = document.getElementById('clientsResults');
+            el.innerHTML = '<div class="loading">Поиск...</div>';
+            el.classList.add('show');
+
+            const res = await fetch(`${API}/api/clients?search=${encodeURIComponent(q)}&limit=20`);
+            const data = await res.json();
+
+            if (!data.clients?.length) {
+                el.innerHTML = '<div class="result-item">Не найдено</div>';
+                return;
+            }
+
+            el.innerHTML = data.clients.map(c => `
+                <div class="result-item" onclick="openClientCard('${c.ref}')">
+                    <div class="name">${c.name}</div>
+                    <div class="meta">${c.code}${c.inn ? ' • ИНН: ' + c.inn : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        async function openClientCard(ref) {
+            document.getElementById('clientCard').style.display = 'block';
+            document.getElementById('clientCardInfo').innerHTML = '<div class="loading">Загрузка...</div>';
+            document.getElementById('clientCardCars').innerHTML = '';
+            document.getElementById('clientCardOrders').innerHTML = '';
+            document.getElementById('clientCardStats').innerHTML = '';
+            document.getElementById('clientsResults').classList.remove('show');
+
+            const res = await fetch(`${API}/api/clients/${ref}`);
+            const data = await res.json();
+
+            document.getElementById('clientCardName').textContent = data.name;
+
+            // Основная информация
+            document.getElementById('clientCardInfo').innerHTML = `
+                <div class="client-info-item">
+                    <div class="label">Код</div>
+                    <div class="value">${data.code}</div>
+                </div>
+                <div class="client-info-item">
+                    <div class="label">ИНН</div>
+                    <div class="value">${data.inn || '—'}</div>
+                </div>
+                <div class="client-info-item full">
+                    <div class="label">Договор</div>
+                    <div class="value">${data.contract_key ? 'Основной договор' : 'Не указан'}</div>
+                </div>
+            `;
+
+            // Автомобили
+            if (data.cars?.length) {
+                document.getElementById('clientCardCars').innerHTML = data.cars.map(c => `
+                    <div class="car-card">
+                        <div class="car-name">${c.name}</div>
+                        <div class="car-meta">${c.plate ? c.plate + ' • ' : ''}${c.vin ? 'VIN: ' + c.vin : ''}</div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('clientCardCars').innerHTML = '<div class="empty-section">Нет автомобилей</div>';
+            }
+
+            // История заказов
+            if (data.orders?.length) {
+                document.getElementById('clientCardOrders').innerHTML = data.orders.map(o => `
+                    <div class="order-item" onclick="openOrder('${o.ref}')">
+                        <div class="order-header">
+                            <span class="order-number">№ ${o.number}</span>
+                            <span class="order-date">${o.date}</span>
+                        </div>
+                        <div class="order-sum">${formatSum(o.sum)} ₽</div>
+                        <div class="order-comment">${o.status}</div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('clientCardOrders').innerHTML = '<div class="empty-section">Нет заказов</div>';
+            }
+
+            // Статистика
+            const totalOrders = data.orders?.length || 0;
+            const totalSum = data.orders?.reduce((sum, o) => sum + (o.sum || 0), 0) || 0;
+            const carsCount = data.cars?.length || 0;
+
+            document.getElementById('clientCardStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${totalOrders}</div>
+                    <div class="stat-label">заказов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${carsCount}</div>
+                    <div class="stat-label">автомобилей</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${formatSum(totalSum)}</div>
+                    <div class="stat-label">₽ всего</div>
+                </div>
+            `;
+        }
+
+        function closeClientCard() {
+            document.getElementById('clientCard').style.display = 'none';
+        }
+
+        // === Клиенты (для формы заказа) ===
+        let clientTimeout;
+        document.getElementById('clientSearch').addEventListener('input', e => {
+            clearTimeout(clientTimeout);
+            const q = e.target.value.trim();
+            if (q.length < 2) {
+                document.getElementById('clientResults').classList.remove('show');
+                return;
+            }
+            clientTimeout = setTimeout(() => searchClients(q), 300);
+        });
+
+        async function searchClients(q) {
+            const el = document.getElementById('clientResults');
+            el.innerHTML = '<div class="loading">Поиск...</div>';
+            el.classList.add('show');
+
+            const res = await fetch(`${API}/api/clients?search=${encodeURIComponent(q)}&limit=10`);
+            const data = await res.json();
+
+            if (!data.clients?.length) {
+                el.innerHTML = '<div class="result-item">Не найдено</div>';
+                return;
+            }
+
+            el.innerHTML = data.clients.map(c => `
+                <div class="result-item" onclick='selectClient(${JSON.stringify(c)})'>
+                    <div class="name">${c.name}</div>
+                    <div class="meta">${c.code}${c.inn ? ' • ИНН: ' + c.inn : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        async function selectClient(c) {
+            client = c;
+            document.getElementById('clientName').textContent = c.name;
+            document.getElementById('clientMeta').textContent = c.code + (c.inn ? ' • ИНН: ' + c.inn : '');
+            document.getElementById('clientSelected').classList.add('show');
+            document.getElementById('clientSearchWrap').style.display = 'none';
+            document.getElementById('clientResults').classList.remove('show');
+
+            // Показываем историю клиента
+            const historyEl = document.getElementById('clientHistory');
+            historyEl.classList.add('show');
+            document.getElementById('carsList').innerHTML = '<div class="loading">Загрузка...</div>';
+            document.getElementById('ordersList').innerHTML = '';
+            document.getElementById('clientStats').innerHTML = '';
+
+            const res = await fetch(`${API}/api/clients/${c.ref}`);
+            const data = await res.json();
+
+            if (data.contract_key) {
+                client.contract_key = data.contract_key;
+            }
+
+            // Автомобили клиента
+            if (data.cars?.length) {
+                document.getElementById('carsList').innerHTML = data.cars.map(car => `
+                    <span class="car-chip" onclick='selectCarFromClient(${JSON.stringify(car)})'>
+                        ${car.name} ${car.plate ? '• ' + car.plate : ''}
+                    </span>
+                `).join('');
+            } else {
+                document.getElementById('carsList').innerHTML = '<div class="no-data">Нет автомобилей</div>';
+            }
+
+            // История заказов
+            if (data.orders?.length) {
+                document.getElementById('ordersList').innerHTML = data.orders.map(o => `
+                    <div class="order-item" onclick="openOrder('${o.ref}')">
+                        <div class="order-header">
+                            <span class="order-number">№ ${o.number}</span>
+                            <span class="order-date">${o.date}</span>
+                        </div>
+                        <div class="order-sum">${formatSum(o.sum)} ₽</div>
+                        <div class="order-comment">${o.status}</div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('ordersList').innerHTML = '<div class="no-data">Нет заказов</div>';
+            }
+
+            // Статистика
+            const totalOrders = data.orders?.length || 0;
+            const totalSum = data.orders?.reduce((sum, o) => sum + (o.sum || 0), 0) || 0;
+            const carsCount = data.cars?.length || 0;
+
+            document.getElementById('clientStats').innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${totalOrders}</div>
+                    <div class="stat-label">заказов</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${carsCount}</div>
+                    <div class="stat-label">авто</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${formatSum(totalSum)}</div>
+                    <div class="stat-label">₽ всего</div>
+                </div>
+            `;
+
+            updateBtn();
+        }
+
+        function formatSum(sum) {
+            return Math.round(sum || 0).toLocaleString('ru-RU');
+        }
+
+        function clearClient() {
+            client = null;
+            document.getElementById('clientSelected').classList.remove('show');
+            document.getElementById('clientSearchWrap').style.display = 'block';
+            document.getElementById('clientSearch').value = '';
+            document.getElementById('clientHistory').classList.remove('show');
+            clearCar();
+            updateBtn();
+        }
+
+        // === Автомобили ===
+        let carTimeout;
+        document.getElementById('carSearch').addEventListener('input', e => {
+            clearTimeout(carTimeout);
+            const q = e.target.value.trim();
+            if (q.length < 2) {
+                document.getElementById('carResults').classList.remove('show');
+                return;
+            }
+            carTimeout = setTimeout(() => searchCars(q), 300);
+        });
+
+        async function searchCars(q) {
+            const el = document.getElementById('carResults');
+            el.innerHTML = '<div class="loading">Поиск...</div>';
+            el.classList.add('show');
+
+            const res = await fetch(`${API}/api/cars?search=${encodeURIComponent(q)}&limit=10`);
+            const data = await res.json();
+
+            if (!data.cars?.length) {
+                el.innerHTML = '<div class="result-item">Не найдено</div>';
+                return;
+            }
+
+            el.innerHTML = data.cars.map(c => `
+                <div class="result-item" onclick='selectCar(${JSON.stringify(c)})'>
+                    <div class="name">${c.name}</div>
+                    <div class="meta">${c.plate || ''}${c.vin ? ' • VIN: ' + c.vin : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectCar(c) {
+            car = c;
+            document.getElementById('carName').textContent = c.name;
+            document.getElementById('carMeta').textContent = (c.plate || '') + (c.vin ? ' • VIN: ' + c.vin : '');
+            document.getElementById('carSelected').classList.add('show');
+            document.getElementById('carSearchWrap').style.display = 'none';
+            document.getElementById('carResults').classList.remove('show');
+
+            // Подсвечиваем чип если это авто клиента
+            document.querySelectorAll('.car-chip').forEach(chip => {
+                chip.classList.toggle('selected', chip.textContent.includes(c.name));
+            });
+
+            updateBtn();
+        }
+
+        function selectCarFromClient(c) {
+            selectCar(c);
+        }
+
+        function clearCar() {
+            car = null;
+            document.getElementById('carSelected').classList.remove('show');
+            document.getElementById('carSearchWrap').style.display = 'block';
+            document.getElementById('carSearch').value = '';
+            document.querySelectorAll('.car-chip').forEach(chip => chip.classList.remove('selected'));
+            updateBtn();
+        }
+
+        function updateBtn() {
+            document.getElementById('submitBtn').disabled = !client;
+        }
+
+        // === Работы ===
+        let workTimeout;
+        document.getElementById('workSearch').addEventListener('input', e => {
+            clearTimeout(workTimeout);
+            const q = e.target.value.trim();
+            if (q.length < 2) {
+                document.getElementById('workResults').classList.remove('show');
+                return;
+            }
+            workTimeout = setTimeout(() => searchWorks(q), 300);
+        });
+
+        async function searchWorks(q) {
+            const el = document.getElementById('workResults');
+            el.innerHTML = '<div class="loading">Поиск...</div>';
+            el.classList.add('show');
+
+            const res = await fetch(`${API}/api/ref/works?search=${encodeURIComponent(q)}&limit=10`);
+            const data = await res.json();
+
+            if (!data.works?.length) {
+                el.innerHTML = '<div class="result-item">Не найдено</div>';
+                return;
+            }
+
+            el.innerHTML = data.works.map(w => `
+                <div class="result-item" onclick='addWork(${JSON.stringify(w)})'>
+                    <div class="name">${w.name}</div>
+                    <div class="meta">${w.code} <span class="price">${formatSum(w.price)} ₽</span></div>
+                </div>
+            `).join('');
+        }
+
+        function addWork(work) {
+            // Проверяем, не добавлена ли уже
+            if (selectedWorks.find(w => w.ref === work.ref)) {
+                document.getElementById('workResults').classList.remove('show');
+                return;
+            }
+
+            selectedWorks.push({...work, qty: 1, executor: null});
+            renderSelectedWorks();
+            document.getElementById('workResults').classList.remove('show');
+            document.getElementById('workSearch').value = '';
+        }
+
+        function removeWork(ref) {
+            selectedWorks = selectedWorks.filter(w => w.ref !== ref);
+            renderSelectedWorks();
+        }
+
+        function updateWorkQty(ref, qty) {
+            const work = selectedWorks.find(w => w.ref === ref);
+            if (work) work.qty = parseFloat(qty) || 1;
+            updateWorksTotal();
+        }
+
+        function updateWorkPrice(ref, price) {
+            const work = selectedWorks.find(w => w.ref === ref);
+            if (work) work.price = parseFloat(price) || 0;
+            updateWorksTotal();
+        }
+
+        function updateWorkExecutor(ref, executorRef) {
+            const work = selectedWorks.find(w => w.ref === ref);
+            if (work) work.executor = executorRef || null;
+        }
+
+        function updateWorksTotal() {
+            const total = selectedWorks.reduce((sum, w) => sum + (w.qty * w.price), 0);
+            const totalEl = document.getElementById('worksTotal');
+            if (totalEl) {
+                totalEl.textContent = formatSum(total) + ' ₽';
+            }
+        }
+
+        function renderSelectedWorks() {
+            const el = document.getElementById('selectedWorks');
+            if (!selectedWorks.length) {
+                el.innerHTML = '';
+                updateFormBadges();
+                return;
+            }
+
+            const total = selectedWorks.reduce((sum, w) => sum + (w.qty * w.price), 0);
+
+            const execOptions = employeesList.map(e => `<option value="${e.ref}">${e.name}</option>`).join('');
+
+            el.innerHTML = selectedWorks.map(w => `
+                <div class="work-item">
+                    <div class="work-info">
+                        <div class="work-name">${w.name}</div>
+                        <div class="work-price">Сумма: ${formatSum(w.qty * w.price)} ₽</div>
+                    </div>
+                    <div class="work-controls">
+                        <div class="work-field">
+                            <label>Кол-во</label>
+                            <input type="number" value="${w.qty}" min="1" step="1" onchange="updateWorkQty('${w.ref}', this.value)">
+                        </div>
+                        <div class="work-field">
+                            <label>Цена</label>
+                            <input type="number" value="${w.price}" min="0" step="100" onchange="updateWorkPrice('${w.ref}', this.value)">
+                        </div>
+                        <div class="work-field" style="min-width: 150px;">
+                            <label>Исполнитель</label>
+                            <select onchange="updateWorkExecutor('${w.ref}', this.value)" style="padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px;">
+                                <option value="">— не выбран —</option>
+                                ${execOptions.replace(`value="${w.executor}"`, `value="${w.executor}" selected`)}
+                            </select>
+                        </div>
+                    </div>
+                    <button class="remove-work" onclick="removeWork('${w.ref}')">&times;</button>
+                </div>
+            `).join('') + `
+                <div style="text-align: right; padding: 12px; font-weight: 600; color: #059669;">
+                    Итого работы: <span id="worksTotal">${formatSum(total)} ₽</span>
+                </div>
+            `;
+            updateFormBadges();
+        }
+
+        // === Вспомогательные автоработы ===
+        let auxWorkTimeout;
+        document.getElementById('auxWorkSearch').addEventListener('input', e => {
+            clearTimeout(auxWorkTimeout);
+            const q = e.target.value.trim();
+            if (q.length < 2) {
+                document.getElementById('auxWorkResults').classList.remove('show');
+                return;
+            }
+            auxWorkTimeout = setTimeout(() => searchAuxWorks(q), 300);
+        });
+
+        async function searchAuxWorks(q) {
+            const el = document.getElementById('auxWorkResults');
+            el.innerHTML = '<div class="loading">Поиск...</div>';
+            el.classList.add('show');
+            const res = await fetch(`${API}/api/ref/works?search=${encodeURIComponent(q)}&limit=10`);
+            const data = await res.json();
+            if (!data.works?.length) {
+                el.innerHTML = '<div class="result-item">Не найдено</div>';
+                return;
+            }
+            el.innerHTML = data.works.map(w => `
+                <div class="result-item" onclick='addAuxWork(${JSON.stringify(w)})'>
+                    <div class="name">${w.name}</div>
+                    <div class="meta">${w.code} <span class="price">${formatSum(w.price)} ₽</span></div>
+                </div>
+            `).join('');
+        }
+
+        function addAuxWork(work) {
+            if (selectedAuxWorks.find(w => w.ref === work.ref)) {
+                document.getElementById('auxWorkResults').classList.remove('show');
+                return;
+            }
+            selectedAuxWorks.push({...work, qty: 1, executor: null});
+            renderSelectedAuxWorks();
+            document.getElementById('auxWorkResults').classList.remove('show');
+            document.getElementById('auxWorkSearch').value = '';
+        }
+
+        function removeAuxWork(ref) {
+            selectedAuxWorks = selectedAuxWorks.filter(w => w.ref !== ref);
+            renderSelectedAuxWorks();
+        }
+
+        function updateAuxWorkExecutor(ref, executorRef) {
+            const work = selectedAuxWorks.find(w => w.ref === ref);
+            if (work) work.executor = executorRef || null;
+        }
+
+        function renderSelectedAuxWorks() {
+            const el = document.getElementById('selectedAuxWorks');
+            if (!selectedAuxWorks.length) { el.innerHTML = ''; updateFormBadges(); return; }
+            const total = selectedAuxWorks.reduce((sum, w) => sum + (w.qty * w.price), 0);
+            const execOptions = employeesList.map(e => `<option value="${e.ref}">${e.name}</option>`).join('');
+            el.innerHTML = selectedAuxWorks.map(w => `
+                <div class="work-item">
+                    <div class="work-info"><div class="work-name">${w.name}</div><div class="work-price">Сумма: ${formatSum(w.qty * w.price)} ₽</div></div>
+                    <div class="work-controls">
+                        <div class="work-field"><label>Кол-во</label><input type="number" value="${w.qty}" min="1" onchange="selectedAuxWorks.find(x=>x.ref==='${w.ref}').qty=parseFloat(this.value)||1;renderSelectedAuxWorks()"></div>
+                        <div class="work-field"><label>Цена</label><input type="number" value="${w.price}" min="0" onchange="selectedAuxWorks.find(x=>x.ref==='${w.ref}').price=parseFloat(this.value)||0;renderSelectedAuxWorks()"></div>
+                        <div class="work-field" style="min-width: 150px;"><label>Исполнитель</label><select onchange="updateAuxWorkExecutor('${w.ref}', this.value)" style="padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px;"><option value="">— не выбран —</option>${execOptions.replace(`value="${w.executor}"`, `value="${w.executor}" selected`)}</select></div>
+                    </div>
+                    <button class="remove-work" onclick="removeAuxWork('${w.ref}')">&times;</button>
+                </div>
+            `).join('') + `<div style="text-align: right; padding: 12px; font-weight: 600; color: #059669;">Итого: ${formatSum(total)} ₽</div>`;
+            updateFormBadges();
+        }
+
+        // === Товары ===
+        let goodsTimeout;
+        document.getElementById('goodsSearch').addEventListener('input', e => {
+            clearTimeout(goodsTimeout);
+            const q = e.target.value.trim();
+            if (q.length < 2) { document.getElementById('goodsResults').classList.remove('show'); return; }
+            goodsTimeout = setTimeout(() => searchGoods(q), 300);
+        });
+
+        async function searchGoods(q) {
+            const el = document.getElementById('goodsResults');
+            el.innerHTML = '<div class="loading">Поиск...</div>';
+            el.classList.add('show');
+            const res = await fetch(`${API}/api/ref/goods?search=${encodeURIComponent(q)}&limit=10`);
+            const data = await res.json();
+            if (!data.goods?.length) { el.innerHTML = '<div class="result-item">Не найдено</div>'; return; }
+            el.innerHTML = data.goods.map(g => `
+                <div class="result-item" onclick='addGoods(${JSON.stringify(g)})'>
+                    <div class="name">${g.name}</div>
+                    <div class="meta">${g.code} <span class="price">${formatSum(g.price)} ₽</span></div>
+                </div>
+            `).join('');
+        }
+
+        function addGoods(item) {
+            if (selectedGoods.find(g => g.ref === item.ref)) { document.getElementById('goodsResults').classList.remove('show'); return; }
+            selectedGoods.push({...item, qty: 1});
+            renderSelectedGoods();
+            document.getElementById('goodsResults').classList.remove('show');
+            document.getElementById('goodsSearch').value = '';
+        }
+
+        function removeGoods(ref) { selectedGoods = selectedGoods.filter(g => g.ref !== ref); renderSelectedGoods(); }
+
+        function renderSelectedGoods() {
+            const el = document.getElementById('selectedGoods');
+            if (!selectedGoods.length) { el.innerHTML = ''; updateFormBadges(); return; }
+            const total = selectedGoods.reduce((sum, g) => sum + (g.qty * g.price), 0);
+            el.innerHTML = selectedGoods.map(g => `
+                <div class="work-item">
+                    <div class="work-info"><div class="work-name">${g.name}</div><div class="work-price">Сумма: ${formatSum(g.qty * g.price)} ₽</div></div>
+                    <div class="work-controls">
+                        <div class="work-field"><label>Кол-во</label><input type="number" value="${g.qty}" min="1" onchange="selectedGoods.find(x=>x.ref==='${g.ref}').qty=parseFloat(this.value)||1;renderSelectedGoods()"></div>
+                        <div class="work-field"><label>Цена</label><input type="number" value="${g.price}" min="0" onchange="selectedGoods.find(x=>x.ref==='${g.ref}').price=parseFloat(this.value)||0;renderSelectedGoods()"></div>
+                    </div>
+                    <button class="remove-work" onclick="removeGoods('${g.ref}')">&times;</button>
+                </div>
+            `).join('') + `<div style="text-align: right; padding: 12px; font-weight: 600; color: #059669;">Итого товары: ${formatSum(total)} ₽</div>`;
+            updateFormBadges();
+        }
+
+        // === Материалы ===
+        let materialsTimeout;
+        document.getElementById('materialsSearch').addEventListener('input', e => {
+            clearTimeout(materialsTimeout);
+            const q = e.target.value.trim();
+            if (q.length < 2) { document.getElementById('materialsResults').classList.remove('show'); return; }
+            materialsTimeout = setTimeout(() => searchMaterials(q), 300);
+        });
+
+        async function searchMaterials(q) {
+            const el = document.getElementById('materialsResults');
+            el.innerHTML = '<div class="loading">Поиск...</div>';
+            el.classList.add('show');
+            const res = await fetch(`${API}/api/ref/goods?search=${encodeURIComponent(q)}&limit=10`);
+            const data = await res.json();
+            if (!data.goods?.length) { el.innerHTML = '<div class="result-item">Не найдено</div>'; return; }
+            el.innerHTML = data.goods.map(m => `
+                <div class="result-item" onclick='addMaterial(${JSON.stringify(m)})'>
+                    <div class="name">${m.name}</div>
+                    <div class="meta">${m.code} <span class="price">${formatSum(m.price)} ₽</span></div>
+                </div>
+            `).join('');
+        }
+
+        function addMaterial(item) {
+            if (selectedMaterials.find(m => m.ref === item.ref)) { document.getElementById('materialsResults').classList.remove('show'); return; }
+            selectedMaterials.push({...item, qty: 1});
+            renderSelectedMaterials();
+            document.getElementById('materialsResults').classList.remove('show');
+            document.getElementById('materialsSearch').value = '';
+        }
+
+        function removeMaterial(ref) { selectedMaterials = selectedMaterials.filter(m => m.ref !== ref); renderSelectedMaterials(); }
+
+        function renderSelectedMaterials() {
+            const el = document.getElementById('selectedMaterials');
+            if (!selectedMaterials.length) { el.innerHTML = ''; updateFormBadges(); return; }
+            const total = selectedMaterials.reduce((sum, m) => sum + (m.qty * m.price), 0);
+            el.innerHTML = selectedMaterials.map(m => `
+                <div class="work-item">
+                    <div class="work-info"><div class="work-name">${m.name}</div><div class="work-price">Сумма: ${formatSum(m.qty * m.price)} ₽</div></div>
+                    <div class="work-controls">
+                        <div class="work-field"><label>Кол-во</label><input type="number" value="${m.qty}" min="1" onchange="selectedMaterials.find(x=>x.ref==='${m.ref}').qty=parseFloat(this.value)||1;renderSelectedMaterials()"></div>
+                        <div class="work-field"><label>Цена</label><input type="number" value="${m.price}" min="0" onchange="selectedMaterials.find(x=>x.ref==='${m.ref}').price=parseFloat(this.value)||0;renderSelectedMaterials()"></div>
+                    </div>
+                    <button class="remove-work" onclick="removeMaterial('${m.ref}')">&times;</button>
+                </div>
+            `).join('') + `<div style="text-align: right; padding: 12px; font-weight: 600; color: #059669;">Итого материалы: ${formatSum(total)} ₽</div>`;
+            updateFormBadges();
+        }
+
+        // === Материалы заказчика ===
+        let custMaterialsTimeout;
+        document.getElementById('custMaterialsSearch').addEventListener('input', e => {
+            clearTimeout(custMaterialsTimeout);
+            const q = e.target.value.trim();
+            if (q.length < 2) { document.getElementById('custMaterialsResults').classList.remove('show'); return; }
+            custMaterialsTimeout = setTimeout(() => searchCustMaterials(q), 300);
+        });
+
+        async function searchCustMaterials(q) {
+            const el = document.getElementById('custMaterialsResults');
+            el.innerHTML = '<div class="loading">Поиск...</div>';
+            el.classList.add('show');
+            const res = await fetch(`${API}/api/ref/goods?search=${encodeURIComponent(q)}&limit=10`);
+            const data = await res.json();
+            if (!data.goods?.length) { el.innerHTML = '<div class="result-item">Не найдено</div>'; return; }
+            el.innerHTML = data.goods.map(m => `
+                <div class="result-item" onclick='addCustMaterial(${JSON.stringify(m)})'>
+                    <div class="name">${m.name}</div>
+                    <div class="meta">${m.code}</div>
+                </div>
+            `).join('');
+        }
+
+        function addCustMaterial(item) {
+            if (selectedCustMaterials.find(m => m.ref === item.ref)) { document.getElementById('custMaterialsResults').classList.remove('show'); return; }
+            selectedCustMaterials.push({...item, qty: 1});
+            renderSelectedCustMaterials();
+            document.getElementById('custMaterialsResults').classList.remove('show');
+            document.getElementById('custMaterialsSearch').value = '';
+        }
+
+        function removeCustMaterial(ref) { selectedCustMaterials = selectedCustMaterials.filter(m => m.ref !== ref); renderSelectedCustMaterials(); }
+
+        function renderSelectedCustMaterials() {
+            const el = document.getElementById('selectedCustMaterials');
+            if (!selectedCustMaterials.length) { el.innerHTML = ''; updateFormBadges(); return; }
+            el.innerHTML = selectedCustMaterials.map(m => `
+                <div class="work-item">
+                    <div class="work-info"><div class="work-name">${m.name}</div></div>
+                    <div class="work-controls">
+                        <div class="work-field"><label>Кол-во</label><input type="number" value="${m.qty}" min="1" onchange="selectedCustMaterials.find(x=>x.ref==='${m.ref}').qty=parseFloat(this.value)||1;renderSelectedCustMaterials()"></div>
+                    </div>
+                    <button class="remove-work" onclick="removeCustMaterial('${m.ref}')">&times;</button>
+                </div>
+            `).join('');
+            updateFormBadges();
+        }
+
+        // === Создание заказа ===
+        async function createOrder() {
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Создание...';
+
+            try {
+                const res = await fetch(`${API}/api/orders/create`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        client_key: client.ref,
+                        client_name: client.name,
+                        car_key: car?.ref || null,
+                        car_name: car?.name || null,
+                        comment: document.getElementById('comment').value,
+                        mileage: document.getElementById('mileage').value,
+                        // Дополнительные поля
+                        status_key: document.getElementById('status').value || null,
+                        repair_type_key: document.getElementById('repairType').value || null,
+                        workshop_key: document.getElementById('workshop').value || null,
+                        master_key: document.getElementById('master').value || null,
+                        dispatcher_key: document.getElementById('dispatcher').value || null,
+                        next_to: document.getElementById('nextTo').value || null,
+                        date_start: document.getElementById('dateStart').value || null,
+                        date_end: document.getElementById('dateEnd').value || null,
+                        date_issue: document.getElementById('dateIssue').value || null,
+                        date_close: document.getElementById('dateClose').value || null,
+                        // Табличные части
+                        works: selectedWorks.map(w => ({ref: w.ref, qty: w.qty, price: w.price, executor: w.executor})),
+                        aux_works: selectedAuxWorks.map(w => ({ref: w.ref, qty: w.qty, price: w.price, executor: w.executor})),
+                        goods: selectedGoods.map(g => ({ref: g.ref, qty: g.qty, price: g.price})),
+                        materials: selectedMaterials.map(m => ({ref: m.ref, qty: m.qty, price: m.price})),
+                        customer_materials: selectedCustMaterials.map(m => ({ref: m.ref, qty: m.qty}))
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('orderNum').textContent = '№ ' + data.number;
+                    document.getElementById('orderInfo').textContent =
+                        `${client.name}${car ? ' • ' + car.name : ''}`;
+                    document.getElementById('form').style.display = 'none';
+                    document.getElementById('success').classList.add('show');
+                } else {
+                    alert('Ошибка: ' + data.error);
+                    btn.disabled = false;
+                    btn.textContent = 'Создать заказ-наряд';
+                }
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
+                btn.disabled = false;
+                btn.textContent = 'Создать заказ-наряд';
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('success').classList.remove('show');
+            document.getElementById('form').style.display = 'block';
+            document.getElementById('submitBtn').textContent = 'Создать заказ-наряд';
+            clearClient();
+            // Сброс на первый таб
+            document.querySelectorAll('.form-tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.form-tab').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('formTabMain').classList.add('active');
+            document.querySelector('.form-tab').classList.add('active');
+            // Сброс всех полей
+            document.getElementById('comment').value = '';
+            document.getElementById('mileage').value = '';
+            document.getElementById('nextTo').value = '';
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
+            document.getElementById('dateIssue').value = '';
+            document.getElementById('dateClose').value = '';
+            // Сброс селектов на первый элемент
+            document.getElementById('status').selectedIndex = 0;
+            document.getElementById('repairType').selectedIndex = 0;
+            document.getElementById('workshop').selectedIndex = 0;
+            document.getElementById('master').selectedIndex = 0;
+            document.getElementById('dispatcher').selectedIndex = 0;
+            // Сброс всех табличных частей
+            selectedWorks = [];
+            selectedAuxWorks = [];
+            selectedGoods = [];
+            selectedMaterials = [];
+            selectedCustMaterials = [];
+            renderSelectedWorks();
+            renderSelectedAuxWorks();
+            renderSelectedGoods();
+            renderSelectedMaterials();
+            renderSelectedCustMaterials();
+        }
+
+        // === Модальное окно заказа ===
+        async function openOrder(ref) {
+            const modal = document.getElementById('orderModal');
+            const body = document.getElementById('modalBody');
+
+            modal.classList.add('show');
+            body.innerHTML = '<div class="loading">Загрузка деталей...</div>';
+            document.getElementById('modalTitle').textContent = 'Заказ-наряд';
+
+            try {
+                const res = await fetch(`${API}/api/orders/${ref}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    body.innerHTML = `<div class="empty-section">Ошибка: ${data.error}</div>`;
+                    return;
+                }
+
+                document.getElementById('modalTitle').textContent = `Заказ-наряд № ${data.number}`;
+
+                let html = `
+                    <div class="modal-section">
+                        <h4>Основная информация</h4>
+                        <div class="modal-info">
+                            <div class="modal-info-item">
+                                <div class="label">Дата</div>
+                                <div class="value">${data.date}</div>
+                            </div>
+                            <div class="modal-info-item">
+                                <div class="label">Статус</div>
+                                <div class="value">${data.status}</div>
+                            </div>
+                            <div class="modal-info-item">
+                                <div class="label">Клиент</div>
+                                <div class="value">${data.client || '—'}</div>
+                            </div>
+                            <div class="modal-info-item">
+                                <div class="label">Пробег</div>
+                                <div class="value">${data.mileage || '—'} км</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Автомобили
+                if (data.cars?.length) {
+                    html += `
+                        <div class="modal-section">
+                            <h4>Автомобиль</h4>
+                            ${data.cars.map(c => `
+                                <div class="modal-info-item" style="margin-bottom: 8px;">
+                                    <div class="value">${c.name}</div>
+                                    <div class="label">${c.plate ? c.plate + ' • ' : ''}${c.vin ? 'VIN: ' + c.vin : ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                // Причина обращения
+                if (data.comment) {
+                    html += `
+                        <div class="modal-section">
+                            <h4>Причина обращения</h4>
+                            <div class="modal-info-item">
+                                <div class="value">${data.comment}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Работы
+                html += `<div class="modal-section"><h4>Работы</h4>`;
+                if (data.works?.length) {
+                    html += `
+                        <table class="modal-table">
+                            <tr><th>Наименование</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+                            ${data.works.map(w => `
+                                <tr>
+                                    <td>${w.name}</td>
+                                    <td>${w.quantity}</td>
+                                    <td>${formatSum(w.price)} ₽</td>
+                                    <td class="sum">${formatSum(w.sum)} ₽</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                } else {
+                    html += `<div class="empty-section">Работы не добавлены</div>`;
+                }
+                html += `</div>`;
+
+                // Вспомогательные автоработы
+                if (data.aux_works?.length) {
+                    html += `<div class="modal-section"><h4>Вспомогательные автоработы</h4>`;
+                    html += `
+                        <table class="modal-table">
+                            <tr><th>Наименование</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+                            ${data.aux_works.map(w => `
+                                <tr>
+                                    <td>${w.name}</td>
+                                    <td>${w.quantity}</td>
+                                    <td>${formatSum(w.price)} ₽</td>
+                                    <td class="sum">${formatSum(w.sum)} ₽</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                    html += `</div>`;
+                }
+
+                // Товары
+                html += `<div class="modal-section"><h4>Товары</h4>`;
+                if (data.goods?.length) {
+                    html += `
+                        <table class="modal-table">
+                            <tr><th>Наименование</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+                            ${data.goods.map(g => `
+                                <tr>
+                                    <td>${g.name}</td>
+                                    <td>${g.quantity}</td>
+                                    <td>${formatSum(g.price)} ₽</td>
+                                    <td class="sum">${formatSum(g.sum)} ₽</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                } else {
+                    html += `<div class="empty-section">Товары не добавлены</div>`;
+                }
+                html += `</div>`;
+
+                // Материалы (со склада)
+                if (data.materials?.length) {
+                    html += `<div class="modal-section"><h4>Материалы</h4>`;
+                    html += `
+                        <table class="modal-table">
+                            <tr><th>Наименование</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+                            ${data.materials.map(m => `
+                                <tr>
+                                    <td>${m.name}</td>
+                                    <td>${m.quantity}</td>
+                                    <td>${formatSum(m.price)} ₽</td>
+                                    <td class="sum">${formatSum(m.sum)} ₽</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                    html += `</div>`;
+                }
+
+                // Материалы заказчика
+                if (data.customer_materials?.length) {
+                    html += `<div class="modal-section"><h4>Материалы заказчика</h4>`;
+                    html += `
+                        <table class="modal-table">
+                            <tr><th>Наименование</th><th>Кол-во</th></tr>
+                            ${data.customer_materials.map(m => `
+                                <tr>
+                                    <td>${m.name}</td>
+                                    <td>${m.quantity}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                    html += `</div>`;
+                }
+
+                // Исполнители
+                if (data.executors?.length) {
+                    html += `<div class="modal-section"><h4>Исполнители</h4>`;
+                    html += `
+                        <table class="modal-table">
+                            <tr><th>Сотрудник</th><th>% выполнения</th></tr>
+                            ${data.executors.map(e => `
+                                <tr>
+                                    <td>${e.name}</td>
+                                    <td>${e.percent}%</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                    html += `</div>`;
+                }
+
+                // Зачет авансов
+                if (data.advances?.length && data.sum_advances > 0) {
+                    html += `<div class="modal-section"><h4>Зачет авансов</h4>`;
+                    html += `<div class="modal-info-item"><div class="value">Зачтено: ${formatSum(data.sum_advances)} ₽</div></div>`;
+                    html += `</div>`;
+                }
+
+                // Итого
+                html += `
+                    <div class="modal-total">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span class="label">Работы</span>
+                            <span>${formatSum(data.sum_works)} ₽</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span class="label">Товары и материалы</span>
+                            <span>${formatSum(data.sum_goods)} ₽</span>
+                        </div>
+                        ${data.sum_advances > 0 ? `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #059669;">
+                            <span class="label">Зачет авансов</span>
+                            <span>-${formatSum(data.sum_advances)} ₽</span>
+                        </div>
+                        ` : ''}
+                        <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; border-top: 2px solid #e5e7eb; padding-top: 12px; margin-top: 8px;">
+                            <span>Итого</span>
+                            <span class="value">${formatSum(data.sum_total)} ₽</span>
+                        </div>
+                    </div>
+                `;
+
+                body.innerHTML = html;
+
+            } catch (e) {
+                body.innerHTML = `<div class="empty-section">Ошибка загрузки: ${e.message}</div>`;
+            }
+        }
+
+        function closeModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('orderModal').classList.remove('show');
+        }
+
+        // Закрытие по Escape
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+</body>
+</html>
