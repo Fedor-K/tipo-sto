@@ -627,6 +627,39 @@ async def get_employees():
     return [{"ref": i.get("Ref_Key"), "name": i.get("Description", "")} for i in data.get("value", [])]
 
 
+@app.get("/api/ref/executors")
+async def get_executors():
+    """Исполнители (механики) - только сотрудники с флагом Исполнитель=true"""
+    data = await odata_get(
+        "Catalog_Сотрудники?"
+        "$filter=Исполнитель eq true&"
+        "$select=Ref_Key,Description,Цех_Key,ТипРесурса_Key,УчаствуетВПланировании&"
+        "$format=json"
+    )
+
+    # Получаем названия цехов
+    workshops_data = await odata_get("Catalog_Цеха?$select=Ref_Key,Description&$format=json")
+    workshops_map = {w.get("Ref_Key"): w.get("Description", "") for w in workshops_data.get("value", [])}
+
+    executors = []
+    for i in data.get("value", []):
+        workshop_key = i.get("Цех_Key", "")
+        # Пропускаем исполнителей без цеха или без планирования
+        if workshop_key == "00000000-0000-0000-0000-000000000000":
+            continue
+        if i.get("УчаствуетВПланировании") == "НеУчаствуетВПланировании":
+            continue
+
+        executors.append({
+            "ref": i.get("Ref_Key"),
+            "name": i.get("Description", ""),
+            "workshop_key": workshop_key,
+            "workshop_name": workshops_map.get(workshop_key, ""),
+        })
+
+    return {"executors": executors, "count": len(executors)}
+
+
 @app.get("/api/ref/works")
 async def get_works(search: str = None, limit: int = 50):
     """Автоработы для добавления в заказ с ценами из регистра"""
@@ -654,12 +687,15 @@ async def get_works(search: str = None, limit: int = 50):
     works = []
     for i in data.get("value", []):
         ref = i.get("Ref_Key")
+        time_mins = float(i.get("ВремяВыполнения", 0) or 0)
         works.append({
             "ref": ref,
             "code": i.get("Code", "").strip(),
             "name": i.get("Description", ""),
             "price": prices_map.get(ref, 0),  # Цена из регистра
-            "norm_hours": float(i.get("НормаВремени", 0) or 0)
+            "norm_hours": float(i.get("НормаВремени", 0) or 0),
+            "time_minutes": time_mins,  # Норма времени в минутах
+            "time_hours": round(time_mins / 60, 2) if time_mins else 0  # В часах
         })
     return {"works": works, "count": len(works)}
 
