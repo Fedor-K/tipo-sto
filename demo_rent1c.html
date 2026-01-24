@@ -820,12 +820,21 @@
                     <div class="card-body">
                         <div class="form-row">
                             <div class="form-group half">
+                                <label>Гос. номер</label>
+                                <input type="text" id="carPlate" placeholder="А123БВ777" style="text-transform: uppercase;">
+                            </div>
+                            <div class="form-group half">
                                 <label>Текущий пробег (км)</label>
                                 <input type="text" id="mileage" placeholder="125000">
                             </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group half">
                                 <label>Следующее ТО (км)</label>
                                 <input type="text" id="nextTo" placeholder="135000">
+                            </div>
+                            <div class="form-group half">
+                                <!-- пустое место для баланса -->
                             </div>
                         </div>
                         <div class="form-row">
@@ -1686,6 +1695,7 @@
                         client_name: client.name,
                         car_key: car?.ref || null,
                         car_name: car?.name || null,
+                        car_plate: document.getElementById('carPlate').value || null,
                         comment: document.getElementById('comment').value,
                         mileage: document.getElementById('mileage').value,
                         // Дополнительные поля
@@ -1740,6 +1750,7 @@
             document.querySelector('.form-tab').classList.add('active');
             // Сброс всех полей
             document.getElementById('comment').value = '';
+            document.getElementById('carPlate').value = '';
             document.getElementById('mileage').value = '';
             document.getElementById('nextTo').value = '';
             document.getElementById('dateStart').value = '';

@@ -26,13 +26,14 @@ DEFAULTS = {
     "repair_type": "7d9f8931-1a7f-11e6-bee5-20689d8f1e0d",
     "status": "6bd193fc-fa7c-11e5-9841-6cf049a63e1b",
     "workshop": "65ce404a-fa7c-11e5-9841-6cf049a63e1b",
-    "master": "eca30c61-f82d-11f0-9fbb-b02628ea963d",
+    "master": "eca30c81-f82d-11f0-9fbb-b02628ea963d",  # Григорец Александр Анатольевич
     "manager": "eca30c81-f82d-11f0-9fbb-b02628ea963d",
-    "author": "39b4c1f2-fa7c-11e5-9841-6cf049a63e1b",
+    "author": "39b4c1f2-fa7c-11e5-9841-6cf049a63e1b",  # Системный автор
     "currency": "6bd1932d-fa7c-11e5-9841-6cf049a63e1b",
     "operation": "530d99ea-fa7c-11e5-9841-6cf049a63e1b",
     "warehouse": "65ce4049-fa7c-11e5-9841-6cf049a63e1b",
     "repair_order": "c7194270-d152-11e8-87a5-f46d0425712d",
+    "unit": "6ceca65d-18f4-11e6-a20f-6cf049a63e1b",  # Единица измерения по умолчанию (шт)
 }
 
 app = FastAPI(title="TIPO-STO", version="2.0")
@@ -407,6 +408,7 @@ class OrderCreate(BaseModel):
     client_name: str
     car_key: Optional[str] = None
     car_name: Optional[str] = None
+    car_plate: Optional[str] = None  # Гос. номер (вводится вручную)
     comment: Optional[str] = None
     mileage: Optional[str] = None
     # Дополнительные поля
@@ -451,20 +453,36 @@ async def create_order(order: OrderCreate):
         except Exception:
             pass
 
-        # Получаем данные автомобиля (VIN, гос.номер, модель)
+        # Получаем данные автомобиля (VIN, модель, год выпуска и др.) из справочника
         car_vin = ""
-        car_plate = ""
         car_model_key = "00000000-0000-0000-0000-000000000000"
+        car_year = ""
         if order.car_key:
             car_data = await odata_get(f"Catalog_Автомобили(guid'{order.car_key}')?$format=json")
             car_vin = car_data.get("VIN", "") or ""
-            car_plate = car_data.get("ГосНомер", "") or ""
             car_model_key = car_data.get("Модель_Key", "00000000-0000-0000-0000-000000000000")
+            # ГодВыпуска - передаём как есть (DateTime)
+            car_year = car_data.get("ГодВыпуска", "") or ""
+
+        # Гос.номер передаётся из запроса (не хранится в справочнике!)
+        # 1C OData не принимает кириллицу в ГосНомер - конвертируем в латиницу
+        # 12 букв по ГОСТ + fallback для частых ошибок (Б→B, И→I, Г→G)
+        cyr_to_lat = {
+            'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H',
+            'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X',
+            'а': 'A', 'в': 'B', 'е': 'E', 'к': 'K', 'м': 'M', 'н': 'H',
+            'о': 'O', 'р': 'P', 'с': 'C', 'т': 'T', 'у': 'Y', 'х': 'X',
+            # Fallback для нестандартных букв
+            'Б': 'B', 'б': 'B', 'И': 'I', 'и': 'I', 'Г': 'G', 'г': 'G',
+            'Л': 'L', 'л': 'L', 'Д': 'D', 'д': 'D', 'Ж': 'J', 'ж': 'J',
+        }
+        raw_plate = order.car_plate or ""
+        car_plate = ''.join(cyr_to_lat.get(c, c) for c in raw_plate).upper()
 
         now = datetime.now()
 
         # Создаём заявку на ремонт (основной документ!)
-        # Минимальный набор полей - как в успешно созданных заявках
+        # Максимально заполняем все доступные поля
         request_doc = {
             "Date": now.strftime("%Y-%m-%dT%H:%M:%S"),
             "Posted": True,
@@ -473,6 +491,8 @@ async def create_order(order: OrderCreate):
             # Заказчик и автомобиль - ключевые поля
             "Заказчик_Key": order.client_key,
             "Автомобиль_Key": order.car_key or "00000000-0000-0000-0000-000000000000",
+            # Плательщик = Заказчик (по умолчанию)
+            "Контрагент_Key": order.client_key,
             # Данные автомобиля (для отображения)
             "VIN": car_vin,
             "ГосНомер": car_plate,
@@ -484,6 +504,8 @@ async def create_order(order: OrderCreate):
             "ВалютаДокумента_Key": DEFAULTS["currency"],
             "КурсДокумента": 1,
             "Автор_Key": DEFAULTS["author"],
+            # Мастер по умолчанию (если не указан)
+            "Мастер_Key": order.master_key or DEFAULTS["master"],
             # Причина обращения
             "ОписаниеПричиныОбращения": order.comment or "Заявка из TIPO-STO",
             "Состояние": "НеУказано",
@@ -497,6 +519,14 @@ async def create_order(order: OrderCreate):
         if car_model_key and car_model_key != "00000000-0000-0000-0000-000000000000":
             request_doc["Модель_Key"] = car_model_key
 
+        # Год выпуска (передаём как DateTime)
+        if car_year:
+            request_doc["ГодВыпуска"] = car_year
+
+        # Договор клиента
+        if contract_key:
+            request_doc["ДоговорВзаиморасчетов_Key"] = contract_key
+
         # Контактная информация (если есть)
         if client_phone:
             request_doc["ПредставлениеТелефона"] = client_phone
@@ -505,19 +535,30 @@ async def create_order(order: OrderCreate):
             request_doc["АдресЭлектроннойПочты"] = client_email
             request_doc["АдресЭлектроннойПочтыСтрокой"] = client_email
 
-        # Мастер и диспетчер (опционально)
-        if order.master_key:
-            request_doc["Мастер_Key"] = order.master_key
+        # Диспетчер (опционально)
         if order.dispatcher_key:
             request_doc["Диспетчер_Key"] = order.dispatcher_key
 
-        # Даты начала/окончания работ (опционально)
-        if order.date_start:
-            request_doc["ДатаНачала"] = order.date_start + "T09:00:00"
-        if order.date_end:
-            request_doc["ДатаОкончания"] = order.date_end + "T18:00:00"
+        # Даты начала/окончания работ (по умолчанию = сегодня)
+        today = now.strftime("%Y-%m-%d")
+        date_start = order.date_start or today
+        date_end = order.date_end or today
+        request_doc["ДатаНачала"] = date_start + "T09:00:00"
+        request_doc["ДатаОкончания"] = date_end + "T18:00:00"
 
-        # Табличная часть Автоработы (минимальный набор полей)
+        # Табличная часть ПричиныОбращения (связь работ с причиной)
+        # Используем "Ремонт" как причину по умолчанию
+        reason_id = "1"
+        reasons_list = [{
+            "LineNumber": "1",
+            "ИдентификаторПричиныОбращения": reason_id,
+            "ПричинаОбращения_Key": "7d9f8933-1a7f-11e6-bee5-20689d8f1e0d",  # Ремонт
+            "ПричинаОбращенияСодержание": order.comment or "Ремонт",
+            "ВидРемонтаПричиныОбращения_Key": order.repair_type_key or DEFAULTS["repair_type"],
+        }]
+        request_doc["ПричиныОбращения"] = reasons_list
+
+        # Табличная часть Автоработы
         executors_list = []
         sum_works = 0
         if order.works:
@@ -532,10 +573,12 @@ async def create_order(order: OrderCreate):
                     "LineNumber": str(line_num),
                     "Авторабота_Key": w.ref,
                     "ИдентификаторРаботы": work_id,
+                    "ИдентификаторПричиныОбращения": reason_id,  # Связь с причиной
                     "Количество": int(w.qty),
                     "Коэффициент": 0,
                     "Цена": int(w.price),
                     "Сумма": int(work_sum),
+                    "СуммаВсего": int(work_sum),  # Итоговая сумма
                     "СпособРасчетаСтоимостиРаботы": "ФиксированнойСуммой"
                 })
 
@@ -551,6 +594,24 @@ async def create_order(order: OrderCreate):
 
             request_doc["Автоработы"] = works_list
 
+        # Табличная часть ВспомогательныеАвтоработы
+        # ВАЖНО: Не все работы подходят для вспомогательных - только определённого типа
+        # Пример рабочего GUID: c7194262-d152-11e8-87a5-f46d0425712d (Регулировка)
+        if order.aux_works:
+            aux_works_list = []
+            for i, w in enumerate(order.aux_works):
+                line_num = i + 1
+                work_id = str(1000 + line_num)
+
+                aux_works_list.append({
+                    "LineNumber": str(line_num),
+                    "Авторабота_Key": w.ref,
+                    "ИдентификаторРаботы": work_id,
+                    "НормаВремени": float(w.qty) if w.qty else 1.0
+                })
+
+            request_doc["ВспомогательныеАвтоработы"] = aux_works_list
+
         # Исполнители
         if executors_list:
             request_doc["Исполнители"] = executors_list
@@ -565,9 +626,13 @@ async def create_order(order: OrderCreate):
                 goods_list.append({
                     "LineNumber": str(i + 1),
                     "Номенклатура_Key": g.ref,
-                    "Количество": g.qty,
-                    "Цена": g.price,
-                    "Сумма": goods_sum,
+                    "ЕдиницаИзмерения_Key": DEFAULTS["unit"],  # Обязательно!
+                    "ИдентификаторПричиныОбращения": reason_id,  # Связь с причиной
+                    "Количество": int(g.qty),
+                    "Коэффициент": 1,
+                    "Цена": int(g.price),
+                    "Сумма": int(goods_sum),
+                    "СуммаВсего": int(goods_sum),
                     "СкладКомпании_Key": DEFAULTS["warehouse"]
                 })
             request_doc["Товары"] = goods_list
