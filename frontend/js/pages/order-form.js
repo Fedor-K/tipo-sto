@@ -387,6 +387,7 @@ const OrderForm = {
         const mileage = document.getElementById('order-mileage').value;
         const comment = document.getElementById('order-reason').value;
 
+        // Format for backend API - use _key for refs (GUIDs)
         const orderData = {
             client_key: State.currentClient.ref,
             car_key: carKey || null,
@@ -396,15 +397,13 @@ const OrderForm = {
             mileage: mileage || '0',
             comment: comment || 'Ремонт',
             works: State.orderWorks.map(w => ({
-                work_key: w.ref,
-                name: w.name,
+                work_key: w.ref,  // GUID of work
                 qty: w.qty,
                 price: w.price,
                 sum: w.qty * w.price
             })),
             parts: State.orderParts.map(p => ({
-                part_key: p.ref,
-                name: p.name,
+                part_key: p.ref,  // GUID of nomenclature
                 qty: p.qty,
                 price: p.price,
                 discount: p.discount,

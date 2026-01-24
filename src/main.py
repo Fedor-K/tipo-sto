@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -9,6 +11,26 @@ import json
 import os
 
 app = FastAPI(title="TIPO-STO API")
+
+# Frontend directory
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+
+# Mount CSS and JS directories
+if os.path.exists(FRONTEND_DIR):
+    css_dir = os.path.join(FRONTEND_DIR, "css")
+    js_dir = os.path.join(FRONTEND_DIR, "js")
+    if os.path.exists(css_dir):
+        app.mount("/css", StaticFiles(directory=css_dir), name="css")
+    if os.path.exists(js_dir):
+        app.mount("/js", StaticFiles(directory=js_dir), name="js")
+
+@app.get("/")
+async def root():
+    """Serve frontend index.html"""
+    index_path = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "TIPO-STO API", "docs": "/docs"}
 
 # Load data from old database files
 ORDERS_HISTORY = []
@@ -180,6 +202,66 @@ async def get_clients(sort: str = "code", limit: int = 500, search: str = None):
     except Exception as e:
         return {"clients": [], "count": 0, "error": str(e)}
 
+@app.get("/api/clients/{client_ref}")
+async def get_client(client_ref: str):
+    """Get single client by ref"""
+    try:
+        data = await fetch_odata(f"Catalog_Контрагенты(guid'{client_ref}')?$format=json")
+        if "error" in data or not data.get("Ref_Key"):
+            return {"error": "Клиент не найден"}
+
+        # Get client's orders
+        orders_data = await fetch_odata(f"Document_ЗаказНаряд?$filter=Контрагент_Key eq guid'{client_ref}'&$top=50&$orderby=Date desc&$format=json")
+        orders = []
+        for o in orders_data.get("value", []):
+            orders.append({
+                "ref": o.get("Ref_Key", ""),
+                "number": o.get("Number", ""),
+                "date": o.get("Date", ""),
+                "sum": o.get("СуммаДокумента", 0),
+                "status": o.get("Состояние_Key", ""),
+            })
+
+        return {
+            "ref": data.get("Ref_Key", ""),
+            "code": data.get("Code", ""),
+            "name": data.get("Description", ""),
+            "type": "Покупатель",
+            "orders": orders
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/clients/{client_ref}/cars")
+async def get_client_cars_by_ref(client_ref: str):
+    """Get cars for a client from their order history (tabular part Автомобили)"""
+    try:
+        # Get orders for this client with their car tabular parts
+        orders_data = await fetch_odata(f"Document_ЗаказНаряд?$filter=Контрагент_Key eq guid'{client_ref}'&$top=50&$format=json")
+
+        car_refs = set()
+        for o in orders_data.get("value", []):
+            # Cars are in tabular part "Автомобили"
+            cars_tab = o.get("Автомобили", [])
+            for car_row in cars_tab:
+                car_key = car_row.get("Автомобиль_Key")
+                if car_key and car_key != "00000000-0000-0000-0000-000000000000":
+                    car_refs.add(car_key)
+
+        cars = []
+        for car_ref in list(car_refs)[:20]:
+            car_data = await fetch_odata(f"Catalog_Автомобили(guid'{car_ref}')?$format=json")
+            if car_data.get("Ref_Key"):
+                cars.append({
+                    "ref": car_data.get("Ref_Key", ""),
+                    "name": car_data.get("Description", ""),
+                    "vin": car_data.get("VIN", "") or car_data.get("ВИН", ""),
+                })
+
+        return {"cars": cars, "count": len(cars)}
+    except Exception as e:
+        return {"cars": [], "error": str(e)}
+
 @app.get("/api/orders")
 async def get_orders(status: str = None, period: str = None, date_from: str = None, date_to: str = None, limit: int = 100):
     """Get orders with optional filters"""
@@ -278,22 +360,113 @@ async def get_order(order_number: str):
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/api/catalogs/works")
+async def get_works_catalog(limit: int = 100, q: str = None):
+    """Get works catalog (Автоработы) from OData"""
+    cache_key = f"works_{limit}_{q or ''}"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+    try:
+        filter_str = ""
+        if q:
+            filter_str = f"&$filter=contains(Description,'{q}')"
+        data = await fetch_odata(f"Catalog_Автоработы?$top={limit}&$select=Ref_Key,Code,Description,ВремяВыполнения{filter_str}&$format=json")
+        if "error" in data:
+            return {"items": [], "count": 0, "error": data["error"]}
+        items = []
+        for item in data.get("value", []):
+            items.append({
+                "ref": item.get("Ref_Key", ""),
+                "code": item.get("Code", ""),
+                "name": item.get("Description", ""),
+                "time": item.get("ВремяВыполнения", 0),
+            })
+        result = {"items": items, "count": len(items)}
+        set_cache(cache_key, result)
+        return result
+    except Exception as e:
+        return {"items": [], "count": 0, "error": str(e)}
+
+@app.get("/api/catalogs/parts")
+async def get_parts_catalog(limit: int = 100, q: str = None):
+    """Get parts catalog (Номенклатура) from OData"""
+    cache_key = f"parts_{limit}_{q or ''}"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+    try:
+        filter_str = ""
+        if q:
+            filter_str = f"&$filter=contains(Description,'{q}')"
+        data = await fetch_odata(f"Catalog_Номенклатура?$top={limit}&$select=Ref_Key,Code,Description,Артикул{filter_str}&$format=json")
+        if "error" in data:
+            return {"items": [], "count": 0, "error": data["error"]}
+        items = []
+        for item in data.get("value", []):
+            items.append({
+                "ref": item.get("Ref_Key", ""),
+                "code": item.get("Code", ""),
+                "name": item.get("Description", ""),
+                "article": item.get("Артикул", ""),
+            })
+        result = {"items": items, "count": len(items)}
+        set_cache(cache_key, result)
+        return result
+    except Exception as e:
+        return {"items": [], "count": 0, "error": str(e)}
+
+@app.get("/api/catalogs/repair-types")
+async def get_repair_types_catalog(limit: int = 50):
+    """Get repair types from OData"""
+    try:
+        data = await fetch_odata(f"Catalog_ВидыРемонта?$top={limit}&$format=json")
+        items = []
+        for item in data.get("value", []):
+            items.append({
+                "ref": item.get("Ref_Key", ""),
+                "code": item.get("Code", ""),
+                "name": item.get("Description", ""),
+            })
+        return {"items": items, "count": len(items)}
+    except Exception as e:
+        return {"items": [], "count": 0, "error": str(e)}
+
+@app.get("/api/catalogs/workshops")
+async def get_workshops_catalog(limit: int = 50):
+    """Get workshops from OData"""
+    try:
+        data = await fetch_odata(f"Catalog_Цеха?$top={limit}&$format=json")
+        items = []
+        for item in data.get("value", []):
+            items.append({
+                "ref": item.get("Ref_Key", ""),
+                "code": item.get("Code", ""),
+                "name": item.get("Description", ""),
+            })
+        return {"items": items, "count": len(items)}
+    except Exception as e:
+        return {"items": [], "count": 0, "error": str(e)}
+
+@app.get("/api/catalogs/employees")
+async def get_employees_catalog(limit: int = 100):
+    """Get employees from OData"""
+    try:
+        data = await fetch_odata(f"Catalog_Сотрудники?$top={limit}&$format=json")
+        items = []
+        for item in data.get("value", []):
+            items.append({
+                "ref": item.get("Ref_Key", ""),
+                "code": item.get("Code", ""),
+                "name": item.get("Description", ""),
+            })
+        return {"items": items, "count": len(items)}
+    except Exception as e:
+        return {"items": [], "count": 0, "error": str(e)}
+
 @app.get("/api/catalogs/{name}")
 async def get_catalog(name: str, limit: int = 100):
-    """Get catalog - from local files for real data, OData for others"""
-
-    # Return real data from local files
-    if name == "employees":
-        items = [{"code": e["code"], "name": e["name"], "ref": e["code"]} for e in EMPLOYEES_DATA[:limit]]
-        return {"items": items, "count": len(items), "source": "local"}
-
-    if name == "workshops":
-        items = [{"code": w["code"], "name": w["name"], "ref": w["code"]} for w in WORKSHOPS_DATA[:limit]]
-        return {"items": items, "count": len(items), "source": "local"}
-
-    if name == "repair_types":
-        items = [{"code": r["code"], "name": r["name"], "ref": r["code"]} for r in REPAIR_TYPES_DATA[:limit]]
-        return {"items": items, "count": len(items), "source": "local"}
+    """Get catalog - generic endpoint for other catalogs"""
 
     # For other catalogs - use OData
     cache_key = f"catalog_{name}_{limit}"
@@ -641,83 +814,211 @@ async def get_stats():
 
 @app.post("/api/orders")
 async def create_order(order: dict):
-    """Create order via OData"""
+    """Create order via OData with works and parts"""
     try:
         # Correct GUID values for ООО Сервис-Авто organization
         DEFAULT_ORG = "39b4c1f1-fa7c-11e5-9841-6cf049a63e1b"
         DEFAULT_DIVISION = "39b4c1f0-fa7c-11e5-9841-6cf049a63e1b"
-        DEFAULT_PRICE_TYPE = "65ce4042-fa7c-11e5-9841-6cf049a63e1b"
+        DEFAULT_PRICE_TYPE = "65ce4042-fa7c-11e5-9841-6cf049a63e1b"  # Основной тип цен продажи
+        DEFAULT_PRICE_TYPE_WORKS = "c93d5c5a-1928-11e6-a20f-6cf049a63e1b"  # Тип цен авторабот
         DEFAULT_REPAIR_TYPE = "7d9f8931-1a7f-11e6-bee5-20689d8f1e0d"
         DEFAULT_STATUS = "6bd193fc-fa7c-11e5-9841-6cf049a63e1b"  # Заявка
         DEFAULT_WORKSHOP = "65ce404a-fa7c-11e5-9841-6cf049a63e1b"  # Основной цех
-        DEFAULT_MASTER = "c94de32f-fa7c-11e5-9841-6cf049a63e1b"  # Дмитренко
-        DEFAULT_MANAGER = "c94de33e-fa7c-11e5-9841-6cf049a63e1b"
         DEFAULT_AUTHOR = "39b4c1f2-fa7c-11e5-9841-6cf049a63e1b"
         DEFAULT_CURRENCY = "6bd1932d-fa7c-11e5-9841-6cf049a63e1b"
         DEFAULT_OPERATION = "530d99ea-fa7c-11e5-9841-6cf049a63e1b"
         DEFAULT_WAREHOUSE = "65ce4049-fa7c-11e5-9841-6cf049a63e1b"
         DEFAULT_REPAIR_ORDER = "c7194270-d152-11e8-87a5-f46d0425712d"
+        DEFAULT_VAT = "6bd192f4-fa7c-11e5-9841-6cf049a63e1b"  # 18%
+        DEFAULT_NORMHOUR = "c93d5c5b-1928-11e6-a20f-6cf049a63e1b"  # Стандартный
+        DEFAULT_MASTER = "c94de32f-fa7c-11e5-9841-6cf049a63e1b"  # Мастер по умолчанию
+        DEFAULT_MANAGER = "c94de33e-fa7c-11e5-9841-6cf049a63e1b"  # Менеджер по умолчанию
 
         # Prepare OData document with ALL required fields
         doc_data = {
             "Date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "Posted": False,
             "Организация_Key": DEFAULT_ORG,
             "ПодразделениеКомпании_Key": DEFAULT_DIVISION,
             "ТипЦен_Key": DEFAULT_PRICE_TYPE,
-            "ТипЦенРабот_Key": DEFAULT_PRICE_TYPE,
+            "ТипЦенРабот_Key": DEFAULT_PRICE_TYPE_WORKS,
             "ВидРемонта_Key": DEFAULT_REPAIR_TYPE,
             "Состояние_Key": DEFAULT_STATUS,
             "Цех_Key": DEFAULT_WORKSHOP,
+            "Автор_Key": DEFAULT_AUTHOR,
             "Мастер_Key": DEFAULT_MASTER,
             "Менеджер_Key": DEFAULT_MANAGER,
-            "Автор_Key": DEFAULT_AUTHOR,
             "ВалютаДокумента_Key": DEFAULT_CURRENCY,
             "ХозОперация_Key": DEFAULT_OPERATION,
             "СкладКомпании_Key": DEFAULT_WAREHOUSE,
             "СводныйРемонтныйЗаказ_Key": DEFAULT_REPAIR_ORDER,
             "КурсДокумента": 1,
+            "КурсВалютыВзаиморасчетов": 1,
+            "КурсВалютыУпр": 90.0945,
+            "СпособЗачетаАвансов": "НеЗачитывать",
             "РегламентированныйУчет": True,
+            "ЗакрыватьЗаказыТолькоПоДанномуЗаказНаряду": True,
+            "ВерсияОбъекта": "02.00",
         }
 
-        # Map client and get their contract
-        if order.get("client_code"):
+        # Map client - support both client_key (ref) and client_code
+        client_ref = order.get("client_key")  # Frontend sends ref directly
+        if not client_ref and order.get("client_code"):
             client_data = await fetch_odata(f"Catalog_Контрагенты?$filter=Code eq '{order['client_code']}'&$format=json")
-            if client_data.get("value"):
-                client_ref = client_data["value"][0].get("Ref_Key")
-                client_name = client_data["value"][0].get("Description", "")
-                doc_data["Контрагент_Key"] = client_ref
-                # Get client's contract
-                contract_data = await fetch_odata(f"Catalog_ДоговорыВзаиморасчетов?$filter=Owner_Key eq guid'{client_ref}'&$top=1&$format=json")
-                if contract_data.get("value"):
-                    doc_data["ДоговорВзаиморасчетов_Key"] = contract_data["value"][0].get("Ref_Key")
-                else:
-                    # Create contract for client if not exists
-                    contract_doc = {
-                        "Owner_Key": client_ref,
-                        "Description": f"Договор сервиса {client_name[:30]}",
-                        "ВалютаВзаиморасчетов_Key": DEFAULT_CURRENCY,
-                        "ВидДоговора": "Покупка",
-                        "ДатаНачала": datetime.now().strftime("%Y-%m-%dT00:00:00"),
-                        "Основной": True,
-                        "ДляАвтосервиса": True,
-                    }
-                    new_contract = await fetch_odata("Catalog_ДоговорыВзаиморасчетов?$format=json", method="POST", data=contract_doc)
-                    if new_contract.get("Ref_Key"):
-                        doc_data["ДоговорВзаиморасчетов_Key"] = new_contract["Ref_Key"]
-                        print(f"Created new contract for client: {new_contract.get('Ref_Key')}")
+            if not client_data.get("value"):
+                return {"success": False, "error": f"Клиент с кодом '{order['client_code']}' не найден"}
+            client_ref = client_data["value"][0].get("Ref_Key")
 
-        # Map car
-        if order.get("car_code"):
+        if not client_ref:
+            return {"success": False, "error": "Не указан клиент (client_key или client_code)"}
+
+        doc_data["Контрагент_Key"] = client_ref
+
+        # Get client's contract
+        contract_data = await fetch_odata(f"Catalog_ДоговорыВзаиморасчетов?$filter=Owner_Key eq guid'{client_ref}'&$top=1&$format=json")
+        if contract_data.get("value"):
+            doc_data["ДоговорВзаиморасчетов_Key"] = contract_data["value"][0].get("Ref_Key")
+        else:
+            # Create contract for client if not exists
+            client_info = await fetch_odata(f"Catalog_Контрагенты(guid'{client_ref}')?$select=Description&$format=json")
+            client_name = client_info.get("Description", "Клиент")[:30] if client_info else "Клиент"
+            contract_doc = {
+                "Owner_Key": client_ref,
+                "Description": f"Договор сервиса {client_name}",
+                "ВалютаВзаиморасчетов_Key": DEFAULT_CURRENCY,
+                "ВидДоговора": "Прочее",
+                "ДатаНачала": datetime.now().strftime("%Y-%m-%dT00:00:00"),
+                "Основной": True,
+                "ДляАвтосервиса": True,
+            }
+            new_contract = await fetch_odata("Catalog_ДоговорыВзаиморасчетов?$format=json", method="POST", data=contract_doc)
+            if new_contract.get("Ref_Key"):
+                doc_data["ДоговорВзаиморасчетов_Key"] = new_contract["Ref_Key"]
+                print(f"Created new contract for client: {new_contract['Ref_Key']}")
+
+        # Map car - support both car_key (ref) and car_code
+        car_ref = order.get("car_key")
+        if not car_ref and order.get("car_code"):
             car_data = await fetch_odata(f"Catalog_Автомобили?$filter=Code eq '{order['car_code']}'&$format=json")
             if car_data.get("value"):
-                doc_data["Автомобиль_Key"] = car_data["value"][0].get("Ref_Key")
+                car_ref = car_data["value"][0].get("Ref_Key")
+        if car_ref:
+            # Машина добавляется в табличную часть Автомобили, не в шапку
+            doc_data["Автомобили"] = [{"LineNumber": "1", "Автомобиль_Key": car_ref}]
 
-        # Map other fields
+        # Map other fields from UI
         if order.get("comment"):
             doc_data["ОписаниеПричиныОбращения"] = order["comment"]
         if order.get("mileage"):
             doc_data["Пробег"] = str(order["mileage"])
+
+        # Map workshop - support both key and code
+        workshop_ref = order.get("workshop_key")
+        if not workshop_ref and order.get("workshop_code"):
+            workshop_data = await fetch_odata(f"Catalog_Цеха?$filter=Code eq '{order['workshop_code']}'&$format=json")
+            if workshop_data.get("value"):
+                workshop_ref = workshop_data["value"][0].get("Ref_Key")
+        if workshop_ref:
+            doc_data["Цех_Key"] = workshop_ref
+
+        # Map master - support both key and code
+        master_ref = order.get("master_key")
+        if not master_ref and order.get("master_code"):
+            master_data = await fetch_odata(f"Catalog_Сотрудники?$filter=Code eq '{order['master_code']}'&$format=json")
+            if master_data.get("value"):
+                master_ref = master_data["value"][0].get("Ref_Key")
+        if master_ref:
+            doc_data["Мастер_Key"] = master_ref
+
+        # Map manager by code (legacy)
+        if order.get("manager_code"):
+            manager_data = await fetch_odata(f"Catalog_Сотрудники?$filter=Code eq '{order['manager_code']}'&$format=json")
+            if manager_data.get("value"):
+                doc_data["Менеджер_Key"] = manager_data["value"][0].get("Ref_Key")
+
+        # Map repair type - support both key and code
+        repair_ref = order.get("repair_type_key")
+        if not repair_ref and order.get("repair_type_code"):
+            repair_data = await fetch_odata(f"Catalog_ВидыРемонта?$filter=Code eq '{order['repair_type_code']}'&$format=json")
+            if repair_data.get("value"):
+                repair_ref = repair_data["value"][0].get("Ref_Key")
+        if repair_ref:
+            doc_data["ВидРемонта_Key"] = repair_ref
+
+        # Add works (Автоработы) to tabular part
+        if order.get("works"):
+            autoworks = []
+            for idx, work in enumerate(order["works"], 1):
+                # Support both work_key (from frontend) and work_ref (legacy)
+                work_ref = work.get("work_key") or work.get("work_ref")
+                qty = work.get("qty", work.get("quantity", 1))
+                price = work.get("price", 0)
+
+                # Fetch price from catalog if not provided
+                if work_ref and price == 0:
+                    work_data = await fetch_odata(f"Catalog_Автоработы(guid'{work_ref}')?$select=Цена&$format=json")
+                    if work_data and work_data.get("Цена"):
+                        price = float(work_data.get("Цена", 0))
+
+                total = work.get("sum") if work.get("sum") else qty * price
+
+                work_row = {
+                    "LineNumber": str(idx),
+                    "Авторабота_Key": work_ref,
+                    "Количество": qty,
+                    "Нормочас_Key": work.get("normhour_ref", DEFAULT_NORMHOUR),
+                    "Коэффициент": work.get("coefficient", 1),
+                    "Цена": price,
+                    "Сумма": total,
+                    "СтавкаНДС_Key": work.get("vat_ref", DEFAULT_VAT),
+                    "СуммаНДС": work.get("vat_sum", 0),
+                    "СуммаВсего": total,
+                }
+                autoworks.append(work_row)
+            doc_data["Автоработы"] = autoworks
+
+        # Add parts (Товары) to tabular part
+        if order.get("parts"):
+            goods = []
+            for idx, part in enumerate(order["parts"], 1):
+                # Support both part_key (from frontend) and nomenclature_ref (legacy)
+                nom_ref = part.get("part_key") or part.get("nomenclature_ref")
+                qty = part.get("qty", part.get("quantity", 1))
+                price = part.get("price", 0)
+                discount = part.get("discount", 0)
+
+                # Get unit of measurement and price from nomenclature
+                unit_ref = part.get("unit_ref")
+                part_vat = part.get("vat_ref", DEFAULT_VAT)
+                if nom_ref:
+                    nom_data = await fetch_odata(f"Catalog_Номенклатура(guid'{nom_ref}')?$select=ОсновнаяЕдиницаИзмерения_Key,СтавкаНДС_Key,Цена&$format=json")
+                    if nom_data:
+                        if not unit_ref:
+                            unit_ref = nom_data.get("ОсновнаяЕдиницаИзмерения_Key", "00000000-0000-0000-0000-000000000000")
+                        if not part.get("vat_ref"):
+                            part_vat = nom_data.get("СтавкаНДС_Key", DEFAULT_VAT)
+                        # Fetch price from catalog if not provided
+                        if price == 0 and nom_data.get("Цена"):
+                            price = float(nom_data.get("Цена", 0))
+
+                total = part.get("sum") if part.get("sum") else qty * price * (1 - discount / 100)
+
+                part_row = {
+                    "LineNumber": str(idx),
+                    "Номенклатура_Key": nom_ref,
+                    "Количество": qty,
+                    "ЕдиницаИзмерения_Key": unit_ref or "00000000-0000-0000-0000-000000000000",
+                    "Коэффициент": part.get("coefficient", 1),
+                    "Цена": price,
+                    "Сумма": total,
+                    "СтавкаНДС_Key": part_vat,
+                    "СуммаНДС": part.get("vat_sum", 0),
+                    "ПроцентСкидки": discount,
+                    "СуммаВсего": total,
+                    "СкладКомпании_Key": part.get("warehouse_ref", DEFAULT_WAREHOUSE),
+                    "ХарактеристикаНоменклатуры_Key": part.get("characteristic_ref", "00000000-0000-0000-0000-000000000000"),
+                }
+                goods.append(part_row)
+            doc_data["Товары"] = goods
 
         # Create document
         print(f"Creating order with data: {doc_data}")
@@ -735,7 +1036,8 @@ async def create_order(order: dict):
             "number": result.get("Number", result.get("Номер", "")),
             "ref": result.get("Ref_Key", ""),
             "message": "Заказ создан через OData",
-            "debug": result
+            "works_count": len(order.get("works", [])),
+            "parts_count": len(order.get("parts", []))
         }
     except Exception as e:
         return {"success": False, "error": str(e)}

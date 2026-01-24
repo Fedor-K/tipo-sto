@@ -232,7 +232,10 @@ async def create_order(order: dict):
             "СкладКомпании_Key": settings.DEFAULT_WAREHOUSE,
             "СводныйРемонтныйЗаказ_Key": settings.DEFAULT_REPAIR_ORDER,
             "КурсДокумента": 1,
+            "КурсВалютыВзаиморасчетов": 1,
             "РегламентированныйУчет": True,
+            "ЗакрыватьЗаказыТолькоПоДанномуЗаказНаряду": True,
+            "СпособЗачетаАвансов": "Автоматически",
         }
 
         # Set client

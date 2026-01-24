@@ -305,6 +305,116 @@ def get_orders(limit: int = Query(100, ge=1, le=50000)):
     except Exception as e:
         return {"orders": [], "count": 0, "error": str(e)}
 
+@app.get("/api/orders/{order_number}/full")
+def get_order_full(order_number: str):
+    """Get full order details with works and goods"""
+    try:
+        base = get_1c_connection()
+
+        # Find order by number
+        query = base.NewObject("Query")
+        query.Text = f"""
+            SELECT
+                З.Ref AS Ref,
+                З.Number AS Number,
+                З.Date AS Date,
+                З.Posted AS Posted,
+                З.Контрагент.Code AS ClientCode,
+                З.Контрагент.Description AS ClientName,
+                З.Автомобиль.Code AS CarCode,
+                З.Автомобиль.Description AS CarName,
+                З.Автомобиль.VIN AS CarVIN,
+                З.ВидРемонта.Description AS RepairType,
+                З.Состояние.Description AS Status,
+                З.Цех.Code AS WorkshopCode,
+                З.Цех.Description AS WorkshopName,
+                З.СуммаДокумента AS DocSum,
+                З.Комментарий AS Comment
+            FROM
+                Document.ЗаказНаряд AS З
+            WHERE
+                З.Number LIKE &Number
+        """
+        query.SetParameter("Number", f"%{order_number}%")
+        result = query.Execute().Select()
+
+        if not result.Next():
+            return {"error": "Order not found"}
+
+        order_ref = result.Ref
+        order = {
+            "number": safe_str(result.Number).strip(),
+            "date": format_date(result.Date),
+            "posted": bool(result.Posted) if result.Posted else False,
+            "client_code": safe_str(result.ClientCode),
+            "client_name": safe_str(result.ClientName),
+            "car_code": safe_str(result.CarCode),
+            "car_name": safe_str(result.CarName),
+            "car_vin": safe_str(result.CarVIN),
+            "repair_type": safe_str(result.RepairType),
+            "status": safe_str(result.Status),
+            "workshop_code": safe_str(result.WorkshopCode),
+            "workshop_name": safe_str(result.WorkshopName),
+            "sum": safe_float(result.DocSum),
+            "comment": safe_str(result.Comment),
+            "works": [],
+            "goods": []
+        }
+
+        # Get works (Работы)
+        query2 = base.NewObject("Query")
+        query2.Text = """
+            SELECT
+                Р.Работа.Code AS WorkCode,
+                Р.Работа.Description AS WorkName,
+                Р.Количество AS Quantity,
+                Р.Цена AS Price,
+                Р.Сумма AS Sum
+            FROM
+                Document.ЗаказНаряд.Работы AS Р
+            WHERE
+                Р.Ref = &Ref
+        """
+        query2.SetParameter("Ref", order_ref)
+        result2 = query2.Execute().Select()
+        while result2.Next():
+            order["works"].append({
+                "code": safe_str(result2.WorkCode),
+                "name": safe_str(result2.WorkName),
+                "quantity": safe_float(result2.Quantity),
+                "price": safe_float(result2.Price),
+                "sum": safe_float(result2.Sum)
+            })
+
+        # Get goods (Товары)
+        query3 = base.NewObject("Query")
+        query3.Text = """
+            SELECT
+                Т.Номенклатура.Code AS PartCode,
+                Т.Номенклатура.Description AS PartName,
+                Т.Количество AS Quantity,
+                Т.Цена AS Price,
+                Т.Сумма AS Sum
+            FROM
+                Document.ЗаказНаряд.Товары AS Т
+            WHERE
+                Т.Ref = &Ref
+        """
+        query3.SetParameter("Ref", order_ref)
+        result3 = query3.Execute().Select()
+        while result3.Next():
+            order["goods"].append({
+                "code": safe_str(result3.PartCode),
+                "name": safe_str(result3.PartName),
+                "quantity": safe_float(result3.Quantity),
+                "price": safe_float(result3.Price),
+                "sum": safe_float(result3.Sum)
+            })
+
+        return {"order": order}
+    except Exception as e:
+        return {"error": str(e)}
+
 # ==================== CATALOGS ====================
 
 @app.get("/api/catalogs/{name}")
