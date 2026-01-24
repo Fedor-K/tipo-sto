@@ -347,11 +347,10 @@ GET /api/catalog/{name}/{ref_key}   - Конкретная запись
   НормыВремени: []  ← пустая табличная часть
 ```
 
-Тестовый сотрудник-исполнитель:
-- Имя: "Механик Тестов"
-- Ref_Key: `122170ab-f946-11f0-9fbb-b02628ea963d`
-- Цех: `65ce404a-fa7c-11e5-9841-6cf049a63e1b`
-- ТипРесурса: "По умолчанию" (`053c462c-a0a7-11ee-a2a6-18c04d4e0a66`)
+**Статус базы 1С (январь 2026):**
+- Сотрудников-исполнителей: **69 из 69** (все настроены)
+- Работ с НормыВремени: **83 из 105**
+- Все сотрудники и работы исправлены через OData API
 
 ---
 
@@ -532,25 +531,29 @@ ODATA_PASS = ""  # Пустой пароль
 
 ## Файлы проекта
 
-### Демо-версия (локальная разработка)
-- `/Users/khatlamadzieva/tipo-sto/demo_v2.html` - **Рабочее демо** (клиенты, карточка, создание заказа)
-- `/Users/khatlamadzieva/tipo-sto/test_server.py` - Прокси-сервер для OData (CORS)
+### Основное приложение (ИСПОЛЬЗУЕТСЯ)
+- `/Users/khatlamadzieva/tipo-sto/demo_rent1c.py` - **Основной backend API**
+- `/Users/khatlamadzieva/tipo-sto/demo_rent1c.html` - **UI интерфейс**
 
-Запуск демо:
+Запуск:
 ```bash
 cd /Users/khatlamadzieva/tipo-sto
-python test_server.py
-# Открыть http://localhost:8765/demo_v2.html
+python demo_rent1c.py
+# Открыть http://localhost:8000/
 ```
 
-### TIPO-STO приложение
-- `/Users/khatlamadzieva/tipo-sto/src/main.py` - TIPO-STO приложение
-- `C:\tipoSTO\main.py` на 147.45.98.69 - развёрнутое приложение
+API эндпоинты:
+- `/api/clients` - клиенты
+- `/api/cars` - автомобили
+- `/api/orders/create` - создание заказ-наряда
+- `/api/ref/executors` - исполнители (69 сотрудников)
+- `/api/ref/works` - работы с ценами и нормами времени
+- `/api/ref/workshops` - цеха
+- `/api/ref/employees` - все сотрудники
 
-### Тестовые файлы (архив)
-- `test_hybrid.html`, `test_hybrid_proxy.html` - тесты гибридного подхода (отвергнут)
-- `test_iframe.html` - тест iframe (отвергнут)
-- `demo.html`, `demo_full.html` - ранние версии демо
+### Архив
+- `/Users/khatlamadzieva/tipo-sto/src/main.py` - старая версия (не используется)
+- `demo_v2.html`, `test_server.py` - ранние версии
 
 ## Настройка публикации OData в 1С
 
