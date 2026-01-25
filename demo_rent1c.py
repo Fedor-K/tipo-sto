@@ -55,6 +55,16 @@ if os.path.exists(history_path):
     total_orders = sum(len(orders) for orders in ORDER_HISTORY.values())
     print(f"[TIPO-STO] Loaded order history: {len(ORDER_HISTORY)} clients, {total_orders} orders")
 
+# Детали заказов из 185.222 (работы + товары по номеру заказа)
+ORDER_DETAILS = {}
+details_path = os.path.join(os.path.dirname(__file__), "order_details.json")
+if os.path.exists(details_path):
+    with open(details_path, 'r', encoding='utf-8') as f:
+        ORDER_DETAILS = json.load(f)
+    total_works = sum(len(d.get('works', [])) for d in ORDER_DETAILS.values())
+    total_goods = sum(len(d.get('goods', [])) for d in ORDER_DETAILS.values())
+    print(f"[TIPO-STO] Loaded order details: {len(ORDER_DETAILS)} orders, {total_works} works, {total_goods} goods")
+
 app = FastAPI(title="TIPO-STO", version="2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -419,6 +429,23 @@ async def get_order(ref: str):
         "executors": executors,
         "materials": materials,
         "advances": advances
+    }
+
+
+@app.get("/api/orders/history/{number}")
+async def get_history_order(number: str):
+    """Детали исторического заказа из 185.222"""
+    details = ORDER_DETAILS.get(number)
+    if not details:
+        return {"error": "Order not found in history", "number": number}
+
+    return {
+        "number": number,
+        "works": details.get("works", []),
+        "goods": details.get("goods", []),
+        "sum_works": sum(w.get("sum", 0) for w in details.get("works", [])),
+        "sum_goods": sum(g.get("sum", 0) for g in details.get("goods", [])),
+        "source": "185.222"
     }
 
 
