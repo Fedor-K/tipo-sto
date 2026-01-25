@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TIPO-STO</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    /* Навигация */
+    nav {
+      background: #2c3e50;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      height: 56px;
+    }
+    nav .logo {
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      margin-right: 40px;
+    }
+    nav a {
+      color: #bdc3c7;
+      text-decoration: none;
+      padding: 16px 20px;
+      transition: all 0.2s;
+    }
+    nav a:hover, nav a.active {
+      color: #fff;
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* Основной контент */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Заголовки страниц */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    /* Кнопки */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #3498db;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #2980b9; }
+    .btn-success {
+      background: #27ae60;
+      color: #fff;
+    }
+    .btn-success:hover { background: #219a52; }
+    .btn-secondary {
+      background: #95a5a6;
+      color: #fff;
+    }
+    .btn-secondary:hover { background: #7f8c8d; }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    /* Поиск */
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .search-box input:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    /* Карточки */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .card-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* Таблицы */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+      font-size: 13px;
+      color: #666;
+    }
+    tr:hover { background: #f8f9fa; }
+    tr { cursor: pointer; }
+
+    /* Статусы */
+    .status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-new { background: #e8f4fd; color: #2980b9; }
+    .status-work { background: #fef3e2; color: #e67e22; }
+    .status-done { background: #e8f8f0; color: #27ae60; }
+    .status-closed { background: #eee; color: #666; }
+
+    /* Информация клиента */
+    .client-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .info-item label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .info-item span {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    /* Модальные окна */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 { font-size: 18px; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+    }
+
+    /* Формы */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    /* Секции */
+    .section { margin-top: 24px; }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .section-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    /* Список машин/заказов */
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .item-row:hover { background: #e9ecef; }
+
+    /* Загрузка */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    /* Пустое состояние */
+    .empty {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #ddd;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .tab:hover { background: #f8f9fa; }
+    .tab.active {
+      border-bottom-color: #3498db;
+      color: #3498db;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="logo">TIPO-STO</div>
+    <a href="#clients" class="nav-link">Клиенты</a>
+    <a href="#orders" class="nav-link">Заказы</a>
+  </nav>
+
+  <main id="app">
+    <div class="loading">Загрузка...</div>
+  </main>
+
+  <!-- Модальное окно: Новый клиент -->
+  <div class="modal" id="modal-client">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Новый клиент</h3>
+        <button class="modal-close" onclick="closeModal('modal-client')">&times;</button>
+      </div>
+      <form id="form-client" onsubmit="submitClient(event)">
+        <div class="form-group">
+          <label>ФИО / Название *</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="form-group">
+          <label>Телефон</label>
+          <input type="tel" name="phone" placeholder="+7 (999) 123-45-67">
+        </div>
+        <div class="form-group">
+          <label>ИНН</label>
+          <input type="text" name="inn">
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" name="is_company"> Юридическое лицо</label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-client')">Отмена</button>
+          <button type="submit" class="btn btn-primary">Создать</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно: Новый автомобиль -->
+  <div class="modal" id="modal-car">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Новый автомобиль</h3>
+        <button class="modal-close" onclick="closeModal('modal-car')">&times;</button>
+      </div>
+      <form id="form-car" onsubmit="submitCar(event)">
+        <input type="hidden" name="owner_ref" id="car-owner-ref">
+        <div class="form-group">
+          <label>VIN</label>
+          <input type="text" name="vin" placeholder="WVWZZZ3CZWE123456">
+        </div>
+        <div class="form-group">
+          <label>Гос. номер</label>
+          <input type="text" name="plate" placeholder="А123БВ777">
+        </div>
+        <div class="form-group">
+          <label>Марка / Модель</label>
+          <input type="text" name="description" placeholder="Volkswagen Passat">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-car')">Отмена</button>
+          <button type="submit" class="btn btn-primary">Создать</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно: Новый заказ -->
+  <div class="modal" id="modal-order">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Новый заказ-наряд</h3>
+        <button class="modal-close" onclick="closeModal('modal-order')">&times;</button>
+      </div>
+      <form id="form-order" onsubmit="submitOrder(event)">
+        <input type="hidden" name="client_ref" id="order-client-ref">
+        <div class="form-group">
+          <label>Автомобиль *</label>
+          <select name="car_ref" id="order-car-select" required>
+            <option value="">Выберите автомобиль</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Пробег (км)</label>
+          <input type="number" name="mileage" placeholder="50000">
+        </div>
+        <div class="form-group">
+          <label>Причина обращения</label>
+          <textarea name="comment" rows="3" placeholder="Описание проблемы..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-order')">Отмена</button>
+          <button type="submit" class="btn btn-primary">Создать заказ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+// ============================================================
+// API
+// ============================================================
+
+const API = {
+  async get(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+  async post(url, data) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+  async patch(url, data) {
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+};
+
+// ============================================================
+// РОУТЕР
+// ============================================================
+
+function navigate(hash) {
+  window.location.hash = hash;
+}
+
+function getRoute() {
+  const hash = window.location.hash.slice(1) || 'clients';
+  const parts = hash.split('/');
+  return { page: parts[0], id: parts[1] };
+}
+
+async function router() {
+  const route = getRoute();
+  const app = document.getElementById('app');
+
+  // Обновляем активную ссылку в навигации
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + route.page);
+  });
+
+  try {
+    if (route.page === 'clients' && !route.id) {
+      await renderClients();
+    } else if (route.page === 'clients' && route.id) {
+      await renderClient(route.id);
+    } else if (route.page === 'orders' && !route.id) {
+      await renderOrders();
+    } else if (route.page === 'orders' && route.id) {
+      await renderOrder(route.id);
+    } else {
+      await renderClients();
+    }
+  } catch (err) {
+    app.innerHTML = `<div class="card"><p>Ошибка: ${err.message}</p></div>`;
+  }
+}
+
+window.addEventListener('hashchange', router);
+window.addEventListener('load', router);
+
+// ============================================================
+// СТРАНИЦЫ
+// ============================================================
+
+// Список клиентов
+async function renderClients(search = '') {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading">Загрузка...</div>`;
+
+  const url = search ? `/api/clients?search=${encodeURIComponent(search)}` : '/api/clients';
+  const data = await API.get(url);
+
+  app.innerHTML = `
+    <div class="page-header">
+      <h1>Клиенты</h1>
+      <button class="btn btn-primary" onclick="openModal('modal-client')">+ Новый клиент</button>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="search-clients" placeholder="Поиск по имени или телефону..."
+             value="${search}" onkeyup="searchClientsDebounced(event)">
+    </div>
+
+    <div class="card">
+      ${data.clients.length === 0 ? '<div class="empty">Клиенты не найдены</div>' : `
+        <table>
+          <thead>
+            <tr>
+              <th>Имя</th>
+              <th>Телефон</th>
+              <th>ИНН</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.clients.map(c => `
+              <tr onclick="navigate('clients/${c.ref}')">
+                <td>${escapeHtml(c.name)}</td>
+                <td>${escapeHtml(c.phone)}</td>
+                <td>${escapeHtml(c.inn)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `}
+    </div>
+  `;
+}
+
+let searchTimeout;
+function searchClientsDebounced(event) {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    renderClients(event.target.value);
+  }, 300);
+}
+
+// Карточка клиента
+async function renderClient(ref) {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading">Загрузка...</div>`;
+
+  const data = await API.get(`/api/clients/${ref}`);
+  const { client, cars, orders } = data;
+
+  app.innerHTML = `
+    <div class="page-header">
+      <h1>${escapeHtml(client.name)}</h1>
+      <button class="btn btn-success" onclick="openOrderModal('${ref}')">+ Новый заказ</button>
+    </div>
+
+    <div class="card">
+      <div class="client-info">
+        <div class="info-item">
+          <label>Телефон</label>
+          <span>${escapeHtml(client.phone) || '—'}</span>
+        </div>
+        <div class="info-item">
+          <label>Email</label>
+          <span>${escapeHtml(client.email) || '—'}</span>
+        </div>
+        <div class="info-item">
+          <label>ИНН</label>
+          <span>${escapeHtml(client.inn) || '—'}</span>
+        </div>
+        <div class="info-item">
+          <label>Код</label>
+          <span>${escapeHtml(client.code) || '—'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3>Автомобили (${cars.length})</h3>
+        <button class="btn btn-primary btn-sm" onclick="openCarModal('${ref}')">+ Добавить</button>
+      </div>
+      <div class="card">
+        ${cars.length === 0 ? '<div class="empty">Нет автомобилей</div>' : `
+          <div class="item-list">
+            ${cars.map(car => `
+              <div class="item-row">
+                <div>
+                  <strong>${escapeHtml(car.name)}</strong><br>
+                  <small>VIN: ${escapeHtml(car.vin) || '—'} | Номер: ${escapeHtml(car.plate) || '—'}</small>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3>Заказы (${orders.length})</h3>
+      </div>
+      <div class="card">
+        ${orders.length === 0 ? '<div class="empty">Нет заказов</div>' : `
+          <table>
+            <thead>
+              <tr>
+                <th>Номер</th>
+                <th>Дата</th>
+                <th>Статус</th>
+                <th>Сумма</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orders.map(o => `
+                <tr onclick="navigate('orders/${o.ref}')">
+                  <td>${escapeHtml(o.number)}</td>
+                  <td>${formatDate(o.date)}</td>
+                  <td>${statusBadge(o.status_ref)}</td>
+                  <td>${formatMoney(o.total)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+      </div>
+    </div>
+  `;
+
+  // Сохраняем машины для модалки заказа
+  window.currentClientCars = cars;
+}
+
+// Список заказов
+async function renderOrders(status = '') {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading">Загрузка...</div>`;
+
+  const url = status ? `/api/orders?status=${status}` : '/api/orders';
+  const data = await API.get(url);
+
+  app.innerHTML = `
+    <div class="page-header">
+      <h1>Заказ-наряды</h1>
+    </div>
+
+    <div class="tabs">
+      <div class="tab ${!status ? 'active' : ''}" onclick="renderOrders('')">Все</div>
+      <div class="tab ${status === 'new' ? 'active' : ''}" onclick="renderOrders('new')">Заявки</div>
+      <div class="tab ${status === 'work' ? 'active' : ''}" onclick="renderOrders('work')">В работе</div>
+      <div class="tab ${status === 'done' ? 'active' : ''}" onclick="renderOrders('done')">Выполнены</div>
+      <div class="tab ${status === 'closed' ? 'active' : ''}" onclick="renderOrders('closed')">Закрыты</div>
+    </div>
+
+    <div class="card">
+      ${data.orders.length === 0 ? '<div class="empty">Заказы не найдены</div>' : `
+        <table>
+          <thead>
+            <tr>
+              <th>Номер</th>
+              <th>Дата</th>
+              <th>Статус</th>
+              <th>Сумма</th>
+              <th>Комментарий</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.orders.map(o => `
+              <tr onclick="navigate('orders/${o.ref}')">
+                <td>${escapeHtml(o.number)}</td>
+                <td>${formatDate(o.date)}</td>
+                <td>${statusBadge(o.status_ref)}</td>
+                <td>${formatMoney(o.total)}</td>
+                <td>${escapeHtml(o.comment).substring(0, 50)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `}
+    </div>
+  `;
+}
+
+// Карточка заказа
+async function renderOrder(ref) {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="loading">Загрузка...</div>`;
+
+  const data = await API.get(`/api/orders/${ref}`);
+  const { order, works, parts, cars } = data;
+
+  app.innerHTML = `
+    <div class="page-header">
+      <h1>Заказ-наряд №${escapeHtml(order.number)}</h1>
+      <div>
+        ${statusBadge(order.status_ref)}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="client-info">
+        <div class="info-item">
+          <label>Дата</label>
+          <span>${formatDate(order.date)}</span>
+        </div>
+        <div class="info-item">
+          <label>Пробег</label>
+          <span>${order.mileage ? order.mileage + ' км' : '—'}</span>
+        </div>
+        <div class="info-item">
+          <label>Сумма работ</label>
+          <span>${formatMoney(order.total_works)}</span>
+        </div>
+        <div class="info-item">
+          <label>Сумма товаров</label>
+          <span>${formatMoney(order.total_parts)}</span>
+        </div>
+        <div class="info-item">
+          <label>ИТОГО</label>
+          <span><strong>${formatMoney(order.total)}</strong></span>
+        </div>
+      </div>
+      ${order.comment ? `<p style="margin-top:16px"><strong>Комментарий:</strong> ${escapeHtml(order.comment)}</p>` : ''}
+    </div>
+
+    <div class="card" style="margin-top: 16px">
+      <div class="card-header">
+        <h2>Изменить статус</h2>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn ${order.status === 'new' ? 'btn-primary' : 'btn-secondary'}"
+                onclick="changeStatus('${ref}', '${STATUSES.new}')">Заявка</button>
+        <button class="btn ${order.status === 'work' ? 'btn-primary' : 'btn-secondary'}"
+                onclick="changeStatus('${ref}', '${STATUSES.work}')">В работе</button>
+        <button class="btn ${order.status === 'done' ? 'btn-primary' : 'btn-secondary'}"
+                onclick="changeStatus('${ref}', '${STATUSES.done}')">Выполнен</button>
+        <button class="btn ${order.status === 'closed' ? 'btn-primary' : 'btn-secondary'}"
+                onclick="changeStatus('${ref}', '${STATUSES.closed}')">Закрыт</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3>Работы (${works.length})</h3>
+      </div>
+      <div class="card">
+        ${works.length === 0 ? '<div class="empty">Нет работ</div>' : `
+          <table>
+            <thead>
+              <tr>
+                <th>Работа</th>
+                <th>Кол-во</th>
+                <th>Цена</th>
+                <th>Сумма</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${works.map(w => `
+                <tr>
+                  <td>${w.work_ref}</td>
+                  <td>${w.quantity}</td>
+                  <td>${formatMoney(w.price)}</td>
+                  <td>${formatMoney(w.total)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3>Запчасти (${parts.length})</h3>
+      </div>
+      <div class="card">
+        ${parts.length === 0 ? '<div class="empty">Нет запчастей</div>' : `
+          <table>
+            <thead>
+              <tr>
+                <th>Запчасть</th>
+                <th>Кол-во</th>
+                <th>Цена</th>
+                <th>Сумма</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${parts.map(p => `
+                <tr>
+                  <td>${p.part_ref}</td>
+                  <td>${p.quantity}</td>
+                  <td>${formatMoney(p.price)}</td>
+                  <td>${formatMoney(p.total)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// СТАТУСЫ
+// ============================================================
+
+const STATUSES = {
+  new: '6bd193fc-fa7c-11e5-9841-6cf049a63e1b',
+  work: '6bd193f9-fa7c-11e5-9841-6cf049a63e1b',
+  done: '6bd193fa-fa7c-11e5-9841-6cf049a63e1b',
+  closed: '6bd193fb-fa7c-11e5-9841-6cf049a63e1b'
+};
+
+function statusBadge(statusRef) {
+  const map = {
+    [STATUSES.new]: '<span class="status status-new">Заявка</span>',
+    [STATUSES.work]: '<span class="status status-work">В работе</span>',
+    [STATUSES.done]: '<span class="status status-done">Выполнен</span>',
+    [STATUSES.closed]: '<span class="status status-closed">Закрыт</span>'
+  };
+  return map[statusRef] || '<span class="status">Неизвестно</span>';
+}
+
+async function changeStatus(orderRef, statusRef) {
+  try {
+    await API.patch(`/api/orders/${orderRef}`, { status_ref: statusRef });
+    await renderOrder(orderRef);
+  } catch (err) {
+    alert('Ошибка: ' + err.message);
+  }
+}
+
+// ============================================================
+// МОДАЛЬНЫЕ ОКНА
+// ============================================================
+
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+function openCarModal(ownerRef) {
+  document.getElementById('car-owner-ref').value = ownerRef;
+  openModal('modal-car');
+}
+
+function openOrderModal(clientRef) {
+  document.getElementById('order-client-ref').value = clientRef;
+
+  // Заполняем список машин
+  const select = document.getElementById('order-car-select');
+  select.innerHTML = '<option value="">Выберите автомобиль</option>';
+
+  if (window.currentClientCars) {
+    window.currentClientCars.forEach(car => {
+      const opt = document.createElement('option');
+      opt.value = car.ref;
+      opt.textContent = car.name || `${car.vin} ${car.plate}`;
+      select.appendChild(opt);
+    });
+  }
+
+  openModal('modal-order');
+}
+
+// ============================================================
+// ФОРМЫ
+// ============================================================
+
+async function submitClient(event) {
+  event.preventDefault();
+  const form = event.target;
+  const data = {
+    name: form.name.value,
+    phone: form.phone.value,
+    inn: form.inn.value,
+    is_company: form.is_company.checked
+  };
+
+  try {
+    const result = await API.post('/api/clients', data);
+    closeModal('modal-client');
+    form.reset();
+    navigate('clients/' + result.ref);
+  } catch (err) {
+    alert('Ошибка: ' + err.message);
+  }
+}
+
+async function submitCar(event) {
+  event.preventDefault();
+  const form = event.target;
+  const data = {
+    owner_ref: form.owner_ref.value,
+    vin: form.vin.value,
+    plate: form.plate.value,
+    description: form.description.value
+  };
+
+  try {
+    await API.post('/api/cars', data);
+    closeModal('modal-car');
+    form.reset();
+    // Перезагружаем карточку клиента
+    await renderClient(data.owner_ref);
+  } catch (err) {
+    alert('Ошибка: ' + err.message);
+  }
+}
+
+async function submitOrder(event) {
+  event.preventDefault();
+  const form = event.target;
+  const data = {
+    client_ref: form.client_ref.value,
+    car_ref: form.car_ref.value,
+    mileage: form.mileage.value ? parseInt(form.mileage.value) : null,
+    comment: form.comment.value
+  };
+
+  try {
+    const result = await API.post('/api/orders', data);
+    closeModal('modal-order');
+    form.reset();
+    navigate('orders/' + result.ref);
+  } catch (err) {
+    alert('Ошибка: ' + err.message);
+  }
+}
+
+// ============================================================
+// УТИЛИТЫ
+// ============================================================
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function formatDate(isoDate) {
+  if (!isoDate) return '—';
+  const d = new Date(isoDate);
+  return d.toLocaleDateString('ru-RU');
+}
+
+function formatMoney(value) {
+  if (!value) return '0 ₽';
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 0
+  }).format(value);
+}
+</script>
+</body>
+</html>
