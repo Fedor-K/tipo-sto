@@ -12,6 +12,7 @@ from datetime import datetime
 import base64
 import httpx
 import os
+import json
 
 # Rent1C OData
 ODATA_URL = "https://aclient.1c-hosting.com/1R96614/1R96614_AA61AS_e771ys34or/odata/standard.odata"
@@ -35,6 +36,14 @@ DEFAULTS = {
     "repair_order": "c7194270-d152-11e8-87a5-f46d0425712d",
     "unit": "6ceca65d-18f4-11e6-a20f-6cf049a63e1b",  # Единица измерения по умолчанию (шт)
 }
+
+# Маппинг клиент -> авто (из импорта 185.222)
+CLIENT_CARS_MAPPING = {}
+mapping_path = os.path.join(os.path.dirname(__file__), "client_cars_mapping.json")
+if os.path.exists(mapping_path):
+    with open(mapping_path, 'r', encoding='utf-8') as f:
+        CLIENT_CARS_MAPPING = json.load(f)
+    print(f"[TIPO-STO] Loaded client-car mapping: {len(CLIENT_CARS_MAPPING)} clients")
 
 app = FastAPI(title="TIPO-STO", version="2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -140,7 +149,11 @@ async def get_client(ref: str):
             if car_key and car_key != "00000000-0000-0000-0000-000000000000":
                 car_keys.add(car_key)
 
-    # Загружаем данные автомобилей клиента (только из его заказов)
+    # Авто клиента: сначала из маппинга, потом из заказов
+    if ref in CLIENT_CARS_MAPPING:
+        car_keys = set(CLIENT_CARS_MAPPING[ref])
+
+    # Загружаем данные автомобилей клиента
     cars = []
     for car_key in list(car_keys)[:10]:
         car_data = await odata_get(f"Catalog_Автомобили(guid'{car_key}')?$format=json")
