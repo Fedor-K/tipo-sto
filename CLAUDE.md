@@ -767,6 +767,7 @@ sshpass -p 'kFop??zSpU4QK-' ssh -o StrictHostKeyChecking=no Administrator@147.45
 | **Цены на запчасти** | 50,000 | ✅ Выгружено | `InformationRegister.Цены` |
 | **Клиенты с авто** | 3,275 | ✅ Маппинг | `Document.ЗаказНаряд` (история) |
 | **Связи клиент↔авто** | 4,236 | ✅ Маппинг | `client_cars_mapping.json` |
+| **История заказов** | 26,434 | ✅ Экспорт | `order_history.json` |
 
 ### Маппинг клиент↔авто
 
@@ -790,6 +791,34 @@ old_ref = "удалённый-ref"
 new_ref = "оставшийся-ref"
 mapping[new_ref] = mapping.pop(old_ref)
 ```
+
+### История заказов
+
+**Файл:** `order_history.json` (в корне проекта)
+
+**Структура:**
+```json
+{
+  "client_code": "ЦБ000140",
+  "client_name": "Иванов Иван",
+  "orders": [
+    {
+      "number": "USTS015378",
+      "date": "2025-07-01",
+      "sum": 2100,
+      "car_name": "AUDI Q7 VIN WA1AJAF72MD01..."
+    }
+  ]
+}
+```
+
+**Как работает в TIPO-STO:**
+1. При загрузке клиента проверяется `ORDER_HISTORY[client_code]`
+2. Исторические заказы добавляются к заказам из Rent1C
+3. Статус исторических заказов = "История"
+4. Сортировка по дате (новые сверху)
+
+**Скрипт экспорта:** `/tmp/export_order_history.py` (запускать на 185.222)
 
 ### Скрипты миграции
 

@@ -45,6 +45,16 @@ if os.path.exists(mapping_path):
         CLIENT_CARS_MAPPING = json.load(f)
     print(f"[TIPO-STO] Loaded client-car mapping: {len(CLIENT_CARS_MAPPING)} clients")
 
+# История заказов из 185.222 (по коду клиента)
+ORDER_HISTORY = {}
+history_path = os.path.join(os.path.dirname(__file__), "order_history.json")
+if os.path.exists(history_path):
+    with open(history_path, 'r', encoding='utf-8') as f:
+        history_data = json.load(f)
+        ORDER_HISTORY = {c['client_code']: c['orders'] for c in history_data}
+    total_orders = sum(len(orders) for orders in ORDER_HISTORY.values())
+    print(f"[TIPO-STO] Loaded order history: {len(ORDER_HISTORY)} clients, {total_orders} orders")
+
 app = FastAPI(title="TIPO-STO", version="2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -165,6 +175,27 @@ async def get_client(ref: str):
                 "vin": car_data.get("VIN", "") or "",
                 "plate": car_data.get("ГосНомер", "") or ""
             })
+
+    # Добавляем историю из 185.222
+    client_code = client["code"]
+    history_orders = ORDER_HISTORY.get(client_code, [])
+
+    # Объединяем: сначала новые заказы из Rent1C, потом история из 185.222
+    # Убираем дубли по номеру заказа
+    existing_numbers = {o["number"] for o in orders}
+    for ho in history_orders:
+        if ho["number"] not in existing_numbers:
+            orders.append({
+                "number": ho["number"],
+                "date": ho["date"],
+                "sum": ho["sum"],
+                "status": "История",
+                "car_name": ho.get("car_name", ""),
+                "source": "185.222"
+            })
+
+    # Сортируем по дате (новые сверху)
+    orders.sort(key=lambda x: x.get("date", ""), reverse=True)
 
     client["orders"] = orders
     client["cars"] = cars
