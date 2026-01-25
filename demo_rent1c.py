@@ -91,8 +91,9 @@ async def get_clients(search: str = None, limit: int = 50):
     """Клиенты из Rent1C"""
     filter_str = ""
     if search:
-        # startswith ищет по началу имени (фамилии)
-        filter_str = f"$filter=startswith(Description, '{search}')&"
+        # Capitalize first letter of each word for OData search
+        search_cap = ' '.join(word.capitalize() for word in search.split())
+        filter_str = f"$filter=substringof('{search_cap}', Description)&"
 
     data = await odata_get(f"Catalog_Контрагенты?{filter_str}$top={limit}&$orderby=Description&$format=json")
 
