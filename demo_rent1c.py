@@ -208,6 +208,29 @@ async def get_client(ref: str):
     # Сортируем по дате (новые сверху)
     orders.sort(key=lambda x: x.get("date", ""), reverse=True)
 
+    # Если нет авто из Rent1C, берём из истории заказов
+    if not cars and history_orders:
+        seen_cars = set()
+        for ho in history_orders:
+            car_name = ho.get("car_name", "")
+            car_vin = ho.get("car_vin", "")
+            if car_name and car_name not in seen_cars:
+                seen_cars.add(car_name)
+                # Извлекаем гос номер из названия (формат: "МАРКА МОДЕЛЬ ЦВЕТ № X000XX000 VIN ...")
+                plate = ""
+                if "№" in car_name and "VIN" in car_name:
+                    try:
+                        plate = car_name.split("№")[1].split("VIN")[0].strip()
+                    except:
+                        pass
+                cars.append({
+                    "ref": "",  # Нет ref для исторических авто
+                    "name": car_name.split(" VIN")[0].strip() if " VIN" in car_name else car_name,
+                    "vin": car_vin,
+                    "plate": plate,
+                    "source": "185.222"
+                })
+
     client["orders"] = orders
     client["cars"] = cars
 

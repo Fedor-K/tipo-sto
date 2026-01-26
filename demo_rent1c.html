@@ -423,9 +423,6 @@
             background: linear-gradient(135deg, #eff6ff, #e0f2fe);
             padding: 16px;
             border-radius: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
         .modal-total .label {
             font-weight: 600;
@@ -1115,7 +1112,7 @@
             // История заказов
             if (data.orders?.length) {
                 document.getElementById('clientCardOrders').innerHTML = data.orders.map(o => `
-                    <div class="order-item" onclick="openOrder('${o.ref}')">
+                    <div class="order-item" onclick="openOrder('${o.ref}', '${o.source || ''}')">
                         <div class="order-header">
                             <span class="order-number">№ ${o.number}</span>
                             <span class="order-date">${o.date}</span>
@@ -1222,7 +1219,7 @@
             // История заказов
             if (data.orders?.length) {
                 document.getElementById('ordersList').innerHTML = data.orders.map(o => `
-                    <div class="order-item" onclick="openOrder('${o.ref}')">
+                    <div class="order-item" onclick="openOrder('${o.ref}', '${o.source || ''}')">
                         <div class="order-header">
                             <span class="order-number">№ ${o.number}</span>
                             <span class="order-date">${o.date}</span>
@@ -1777,7 +1774,7 @@
         }
 
         // === Модальное окно заказа ===
-        async function openOrder(ref) {
+        async function openOrder(ref, source = '') {
             const modal = document.getElementById('orderModal');
             const body = document.getElementById('modalBody');
 
@@ -1786,7 +1783,11 @@
             document.getElementById('modalTitle').textContent = 'Заказ-наряд';
 
             try {
-                const res = await fetch(`${API}/api/orders/${ref}`);
+                // Для исторических заказов из 185.222 используем другой endpoint
+                const url = source === '185.222'
+                    ? `${API}/api/orders/history/${ref}`
+                    : `${API}/api/orders/${ref}`;
+                const res = await fetch(url);
                 const data = await res.json();
 
                 if (data.error) {
@@ -1796,18 +1797,22 @@
 
                 document.getElementById('modalTitle').textContent = `Заказ-наряд № ${data.number}`;
 
+                // Для исторических заказов показываем упрощённую информацию
+                const isHistory = data.source === '185.222';
+
                 let html = `
                     <div class="modal-section">
                         <h4>Основная информация</h4>
                         <div class="modal-info">
                             <div class="modal-info-item">
                                 <div class="label">Дата</div>
-                                <div class="value">${data.date}</div>
+                                <div class="value">${data.date || '—'}</div>
                             </div>
                             <div class="modal-info-item">
                                 <div class="label">Статус</div>
-                                <div class="value">${data.status}</div>
+                                <div class="value">${isHistory ? 'История (185.222)' : data.status}</div>
                             </div>
+                            ${!isHistory ? `
                             <div class="modal-info-item">
                                 <div class="label">Клиент</div>
                                 <div class="value">${data.client || '—'}</div>
@@ -1816,6 +1821,7 @@
                                 <div class="label">Пробег</div>
                                 <div class="value">${data.mileage || '—'} км</div>
                             </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -1856,7 +1862,7 @@
                             ${data.works.map(w => `
                                 <tr>
                                     <td>${w.name}</td>
-                                    <td>${w.quantity}</td>
+                                    <td>${w.quantity || w.qty || 1}</td>
                                     <td>${formatSum(w.price)} ₽</td>
                                     <td class="sum">${formatSum(w.sum)} ₽</td>
                                 </tr>
@@ -1896,7 +1902,7 @@
                             ${data.goods.map(g => `
                                 <tr>
                                     <td>${g.name}</td>
-                                    <td>${g.quantity}</td>
+                                    <td>${g.quantity || g.qty || 1}</td>
                                     <td>${formatSum(g.price)} ₽</td>
                                     <td class="sum">${formatSum(g.sum)} ₽</td>
                                 </tr>
@@ -1973,21 +1979,21 @@
                     <div class="modal-total">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                             <span class="label">Работы</span>
-                            <span>${formatSum(data.sum_works)} ₽</span>
+                            <span style="font-weight: 600;">${formatSum(data.sum_works)} ₽</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                             <span class="label">Товары и материалы</span>
-                            <span>${formatSum(data.sum_goods)} ₽</span>
+                            <span style="font-weight: 600;">${formatSum(data.sum_goods)} ₽</span>
                         </div>
                         ${data.sum_advances > 0 ? `
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #059669;">
                             <span class="label">Зачет авансов</span>
-                            <span>-${formatSum(data.sum_advances)} ₽</span>
+                            <span style="font-weight: 600;">-${formatSum(data.sum_advances)} ₽</span>
                         </div>
                         ` : ''}
-                        <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; border-top: 2px solid #e5e7eb; padding-top: 12px; margin-top: 8px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; border-top: 2px solid #c7d2fe; padding-top: 12px; margin-top: 8px;">
                             <span>Итого</span>
-                            <span class="value">${formatSum(data.sum_total)} ₽</span>
+                            <span style="color: #1d4ed8;">${formatSum(data.sum_total)} ₽</span>
                         </div>
                     </div>
                 `;
