@@ -196,6 +196,7 @@ async def get_client(ref: str):
     for ho in history_orders:
         if ho["number"] not in existing_numbers:
             orders.append({
+                "ref": ho["number"],  # Для исторических заказов ref = number
                 "number": ho["number"],
                 "date": ho["date"],
                 "sum": ho["sum"],
@@ -439,12 +440,15 @@ async def get_history_order(number: str):
     if not details:
         return {"error": "Order not found in history", "number": number}
 
+    sum_works = sum(w.get("sum", 0) for w in details.get("works", []))
+    sum_goods = sum(g.get("sum", 0) for g in details.get("goods", []))
     return {
         "number": number,
         "works": details.get("works", []),
         "goods": details.get("goods", []),
-        "sum_works": sum(w.get("sum", 0) for w in details.get("works", [])),
-        "sum_goods": sum(g.get("sum", 0) for g in details.get("goods", [])),
+        "sum_works": sum_works,
+        "sum_goods": sum_goods,
+        "sum_total": sum_works + sum_goods,
         "source": "185.222"
     }
 
