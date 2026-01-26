@@ -1100,9 +1100,19 @@
             // Автомобили
             if (data.cars?.length) {
                 document.getElementById('clientCardCars').innerHTML = data.cars.map(c => `
-                    <div class="car-card">
-                        <div class="car-name">${c.name}</div>
-                        <div class="car-meta">${c.plate ? c.plate + ' • ' : ''}${c.vin ? 'VIN: ' + c.vin : ''}</div>
+                    <div class="car-card" style="padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 8px;">
+                        <div class="car-name" style="font-weight: 600; color: #1e40af; margin-bottom: 4px;">${c.name}</div>
+                        <div class="car-meta" style="font-size: 13px; color: #6b7280;">
+                            ${c.plate ? '<span style="background: #dbeafe; padding: 2px 8px; border-radius: 4px; font-weight: 600; color: #1e40af;">' + c.plate + '</span> ' : ''}
+                            ${c.vin ? '<span style="color: #9ca3af;">VIN:</span> ' + c.vin : ''}
+                        </div>
+                        ${(c.year || c.color || c.mileage) ? `
+                        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 12px; color: #6b7280;">
+                            ${c.year ? '<span>📅 ' + c.year + ' г.</span>' : ''}
+                            ${c.color ? '<span>🎨 ' + c.color + '</span>' : ''}
+                            ${c.mileage ? '<span>🛣️ ' + Number(c.mileage).toLocaleString('ru-RU') + ' км</span>' : ''}
+                        </div>
+                        ` : ''}
                     </div>
                 `).join('');
             } else {
@@ -1208,9 +1218,16 @@
             // Автомобили клиента
             if (data.cars?.length) {
                 document.getElementById('carsList').innerHTML = data.cars.map(car => `
-                    <span class="car-chip" onclick='selectCarFromClient(${JSON.stringify(car)})'>
-                        ${car.name} ${car.plate ? '• ' + car.plate : ''}
-                    </span>
+                    <div class="car-chip-extended" onclick='selectCarFromClient(${JSON.stringify(car)})' style="padding: 10px; background: #f1f5f9; border-radius: 8px; margin-bottom: 6px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                        <div style="font-weight: 600; color: #1e40af; font-size: 13px;">${car.name}</div>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                            ${car.plate ? '<span style="background: #dbeafe; padding: 1px 6px; border-radius: 3px; color: #1e40af; font-weight: 500;">' + car.plate + '</span> ' : ''}
+                            ${car.vin ? 'VIN: ' + car.vin : ''}
+                        </div>
+                        <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">
+                            ${car.year ? '📅 ' + car.year + ' г. ' : ''}${car.color ? '🎨 ' + car.color + ' ' : ''}${car.mileage ? '🛣️ ' + Number(car.mileage).toLocaleString('ru-RU') + ' км' : ''}
+                        </div>
+                    </div>
                 `).join('');
             } else {
                 document.getElementById('carsList').innerHTML = '<div class="no-data">Нет автомобилей</div>';

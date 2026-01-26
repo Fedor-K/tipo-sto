@@ -177,13 +177,40 @@ async def get_client(ref: str):
     # Загружаем данные автомобилей клиента
     cars = []
     for car_key in list(car_keys)[:10]:
-        car_data = await odata_get(f"Catalog_Автомобили(guid'{car_key}')?$format=json")
+        car_data = await odata_get(f"Catalog_Автомобили(guid'{car_key}')?$expand=Модель,Цвет&$format=json")
         if car_data.get("Ref_Key"):
+            # Парсим гос.номер из названия (формат: "МАРКА МОДЕЛЬ № X000XX000 VIN ...")
+            description = car_data.get("Description", "")
+            plate = ""
+            if "№" in description:
+                try:
+                    plate = description.split("№")[1].split()[0].strip()
+                except:
+                    pass
+
+            # Год выпуска
+            year = ""
+            year_raw = car_data.get("ГодВыпуска", "")
+            if year_raw and year_raw != "0001-01-01T00:00:00":
+                year = year_raw[:4]
+
+            # Модель и цвет из связанных справочников
+            model = ""
+            if car_data.get("Модель"):
+                model = car_data["Модель"].get("Description", "")
+
+            color = ""
+            if car_data.get("Цвет"):
+                color = car_data["Цвет"].get("Description", "")
+
             cars.append({
                 "ref": car_data.get("Ref_Key", ""),
-                "name": car_data.get("Description", ""),
+                "name": description,
                 "vin": car_data.get("VIN", "") or "",
-                "plate": car_data.get("ГосНомер", "") or ""
+                "plate": plate,
+                "year": year,
+                "model": model,
+                "color": color,
             })
 
     # Добавляем историю из 185.222
@@ -210,12 +237,13 @@ async def get_client(ref: str):
 
     # Если нет авто из Rent1C, берём из истории заказов
     if not cars and history_orders:
-        seen_cars = set()
+        seen_cars = {}  # car_name -> car_data (чтобы обновлять пробег)
         for ho in history_orders:
             car_name = ho.get("car_name", "")
             car_vin = ho.get("car_vin", "")
+            mileage = ho.get("mileage", "")
+
             if car_name and car_name not in seen_cars:
-                seen_cars.add(car_name)
                 # Извлекаем гос номер из названия (формат: "МАРКА МОДЕЛЬ ЦВЕТ № X000XX000 VIN ...")
                 plate = ""
                 if "№" in car_name and "VIN" in car_name:
@@ -223,13 +251,41 @@ async def get_client(ref: str):
                         plate = car_name.split("№")[1].split("VIN")[0].strip()
                     except:
                         pass
-                cars.append({
-                    "ref": "",  # Нет ref для исторических авто
-                    "name": car_name.split(" VIN")[0].strip() if " VIN" in car_name else car_name,
+
+                # Парсим цвет из названия (обычно 3-е слово: МАРКА МОДЕЛЬ ЦВЕТ № ...)
+                color = ""
+                parts = car_name.split()
+                if len(parts) >= 3 and "№" in car_name:
+                    # Цвет - слово перед №
+                    try:
+                        idx = parts.index("№") if "№" in parts else -1
+                        if idx > 0:
+                            color = parts[idx - 1]
+                    except:
+                        pass
+
+                # Название без VIN
+                name = car_name.split(" VIN")[0].strip() if " VIN" in car_name else car_name
+
+                seen_cars[car_name] = {
+                    "ref": "",
+                    "name": name,
                     "vin": car_vin,
                     "plate": plate,
+                    "color": color,
+                    "mileage": mileage,
                     "source": "185.222"
-                })
+                }
+            elif car_name in seen_cars and mileage:
+                # Обновляем пробег если новый больше
+                old_mileage = seen_cars[car_name].get("mileage", "0") or "0"
+                try:
+                    if int(mileage) > int(old_mileage):
+                        seen_cars[car_name]["mileage"] = mileage
+                except:
+                    pass
+
+        cars = list(seen_cars.values())
 
     client["orders"] = orders
     client["cars"] = cars
