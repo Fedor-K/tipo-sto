@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # AI Assistant (OpenAI GPT-4 Vision)
     OPENAI_API_KEY: str = ""
 
+    # Auto.dev VIN Decoder API (1000 free/month)
+    AUTODEV_API_KEY: str = ""
+
     # Server
     HOST: str = "0.0.0.0"
     PORT: int = 8000

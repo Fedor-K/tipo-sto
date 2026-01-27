@@ -272,18 +272,20 @@
         <div class="chat-messages" id="chat-messages">
             <div class="chat-message assistant">Привет! Я AI-помощник для механиков. Могу подсказать:
 
-• Порядок выполнения работ
-• Моменты затяжки и допуски
-• Диагностику по симптомам
-• Особенности конкретных марок
+🔧 Расшифровка OBD-II кодов ошибок
+⚙️ Моменты затяжки
+🔍 Диагностика по симптомам
+📷 Анализ фото деталей
 
-📷 Отправьте фото детали — помогу определить её состояние!</div>
+🚗 Укажите марку и модель авто для точных рекомендаций!
+
+Пример: "Kia Rio 2018, код P0171" или "момент затяжки колёс BMW X5"</div>
         </div>
 
         <div class="chat-suggestions" id="chat-suggestions">
-            <div class="chat-suggestion" onclick="askSuggestion('Как заменить тормозные колодки?')">Замена колодок</div>
-            <div class="chat-suggestion" onclick="askSuggestion('Момент затяжки колёсных болтов')">Момент затяжки</div>
-            <div class="chat-suggestion" onclick="askSuggestion('Что это за деталь?')">📷 Распознать деталь</div>
+            <div class="chat-suggestion" onclick="askOBD()">🔧 Код ошибки OBD</div>
+            <div class="chat-suggestion" onclick="askSuggestion('Момент затяжки колёсных болтов')">⚙️ Момент затяжки</div>
+            <div class="chat-suggestion" onclick="askSuggestion('Что это за деталь?')">📷 Фото детали</div>
         </div>
 
         <div id="chat-image-preview" class="chat-image-preview">
@@ -411,6 +413,15 @@
                 document.getElementById('chat-image-input').click();
             } else {
                 document.getElementById('chat-input').value = text;
+                sendChatMessage();
+            }
+        }
+
+        function askOBD() {
+            const code = prompt('Введите код ошибки OBD-II:', 'P0171');
+            if (code && code.trim()) {
+                const cleanCode = code.trim().toUpperCase();
+                document.getElementById('chat-input').value = `Расшифруй код ошибки ${cleanCode}`;
                 sendChatMessage();
             }
         }
