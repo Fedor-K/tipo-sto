@@ -13,6 +13,7 @@ import base64
 import httpx
 import os
 import json
+import uuid
 
 # Rent1C OData
 ODATA_URL = "https://aclient.1c-hosting.com/1R96614/1R96614_AA61AS_e771ys34or/odata/standard.odata"
@@ -287,6 +288,17 @@ async def get_client(ref: str):
 
         cars = list(seen_cars.values())
 
+        # Ищем машины в Rent1C по VIN и подставляем ref
+        for car in cars:
+            if car.get("vin") and not car.get("ref"):
+                try:
+                    rent1c_car = await odata_get(f"Catalog_Автомобили?$filter=VIN eq '{car['vin']}'&$top=1&$format=json")
+                    if rent1c_car.get("value"):
+                        car["ref"] = rent1c_car["value"][0].get("Ref_Key", "")
+                        car["source"] = "185.222 → Rent1C"
+                except:
+                    pass
+
     client["orders"] = orders
     client["cars"] = cars
 
@@ -545,6 +557,7 @@ class GoodsItem(BaseModel):
     ref: str  # Номенклатура_Key
     qty: float = 1
     price: float = 0
+    characteristic_key: Optional[str] = None  # ХарактеристикаНоменклатуры_Key
 
 
 class MaterialItem(BaseModel):
@@ -811,6 +824,357 @@ async def create_order(order: OrderCreate):
             "client": order.client_name,
             "car": order.car_name,
             "sum": total
+        }
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== CREATE ZAKAZ-NARYAD ====================
+
+@app.post("/api/orders/create_order")
+async def create_zakaz_naryad(order: OrderCreate):
+    """Создать Заказ-наряд напрямую в Rent1C (без заявки)"""
+    try:
+        # Получаем договор клиента
+        contracts = await odata_get(f"Catalog_ДоговорыВзаиморасчетов?$filter=Owner_Key eq guid'{order.client_key}'&$top=1&$format=json")
+        contract_key = contracts.get("value", [{}])[0].get("Ref_Key") if contracts.get("value") else "00000000-0000-0000-0000-000000000000"
+
+        # Получаем данные автомобиля
+        car_vin = ""
+        car_plate = ""
+        if order.car_key:
+            car_data = await odata_get(f"Catalog_Автомобили(guid'{order.car_key}')?$format=json")
+            car_vin = car_data.get("VIN", "") or ""
+            car_plate = car_data.get("ГосНомер", "") or ""
+
+        # Конвертация гос.номера в латиницу
+        if order.car_plate:
+            cyr_to_lat = {
+                'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H',
+                'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X',
+                'а': 'A', 'в': 'B', 'е': 'E', 'к': 'K', 'м': 'M', 'н': 'H',
+                'о': 'O', 'р': 'P', 'с': 'C', 'т': 'T', 'у': 'Y', 'х': 'X',
+                'Б': 'B', 'б': 'B', 'И': 'I', 'и': 'I', 'Г': 'G', 'г': 'G',
+                'Л': 'L', 'л': 'L', 'Д': 'D', 'д': 'D', 'Ж': 'J', 'ж': 'J',
+            }
+            car_plate = ''.join(cyr_to_lat.get(c, c) for c in order.car_plate).upper()
+
+        now = datetime.now()
+
+        # Создаём Заказ-наряд (Document_ЗаказНаряд)
+        order_doc = {
+            "Date": now.strftime("%Y-%m-%dT%H:%M:%S"),
+            "Posted": False,  # Не проводим сразу - нужно заполнить работы/товары
+            "Организация_Key": DEFAULTS["org"],
+            "ПодразделениеКомпании_Key": DEFAULTS["division"],
+            # ВАЖНО: В ЗаказНаряд НЕТ поля Заказчик_Key (только в ЗаявкаНаРемонт)
+            # Контрагент_Key - это плательщик, не заказчик
+            "Контрагент_Key": order.client_key,  # Плательщик
+            "ДоговорВзаиморасчетов_Key": contract_key,
+            "ВалютаДокумента_Key": DEFAULTS["currency"],
+            "ВидРемонта_Key": order.repair_type_key or DEFAULTS["repair_type"],
+            "Цех_Key": order.workshop_key or DEFAULTS["workshop"],
+            "ТипЦен_Key": DEFAULTS["price_type"],
+            "ТипЦенРабот_Key": DEFAULTS["price_type"],
+            "Автор_Key": DEFAULTS["author"],
+            "КурсДокумента": 1,
+            "СкладКомпании_Key": DEFAULTS["warehouse"],
+            "Состояние_Key": order.status_key or DEFAULTS["status"],
+            "ХозОперация_Key": DEFAULTS["operation"],
+            "Мастер_Key": order.master_key or DEFAULTS["master"],
+            "Менеджер_Key": DEFAULTS["manager"],
+            "СводныйРемонтныйЗаказ_Key": DEFAULTS["repair_order"],
+            "РегламентированныйУчет": True,
+            "ЗакрыватьЗаказыТолькоПоДанномуЗаказНаряду": True,
+            "СпособЗачетаАвансов": "Автоматически",
+            "ОписаниеПричиныОбращения": order.comment or "Заказ из TIPO-STO",
+        }
+
+        # Пробег
+        if order.mileage:
+            order_doc["Пробег"] = str(order.mileage)
+
+        # Автомобиль: ТОЛЬКО через табличную часть Автомобили
+        # ВАЖНО: В ЗаказНаряд НЕТ поля Автомобиль_Key в шапке (только в ЗаявкаНаРемонт)
+        if order.car_key:
+            order_doc["VIN"] = car_vin
+            order_doc["ГосНомер"] = car_plate
+            # Табличная часть Автомобили (единственный способ связать авто с заказом)
+            order_doc["Автомобили"] = [{
+                "LineNumber": "1",
+                "Автомобиль_Key": order.car_key
+            }]
+
+        # Табличная часть Автоработы
+        executors_list = []
+        sum_works = 0
+        if order.works:
+            works_list = []
+            for i, w in enumerate(order.works):
+                line_num = i + 1
+                work_id = str(uuid.uuid4())
+                work_sum = w.qty * w.price
+                sum_works += work_sum
+
+                works_list.append({
+                    "LineNumber": str(line_num),
+                    "Авторабота_Key": w.ref,
+                    "ИдентификаторРаботы": work_id,
+                    "Количество": int(w.qty),
+                    "Нормочас_Key": "65ce4048-fa7c-11e5-9841-6cf049a63e1b",  # Нормочас по умолчанию
+                    "Коэффициент": 1,
+                    "Цена": int(w.price),
+                    "Сумма": int(work_sum),
+                    "СтавкаНДС_Key": "9c8c6fc0-e260-11f0-8e66-000c290904ba",
+                    "СуммаНДС": round(work_sum / 6, 2),
+                    "СуммаВсего": int(work_sum),
+                    "АвторСтроки_Key": DEFAULTS["author"],
+                    "АвторИзмененияСтроки_Key": DEFAULTS["author"],
+                    "СпособРасчетаСтоимостиРаботы": "ФиксированнойСуммой"
+                })
+
+                # Исполнитель для работы
+                if w.executor:
+                    executors_list.append({
+                        "LineNumber": str(len(executors_list) + 1),
+                        "ИдентификаторРаботы": work_id,
+                        "Исполнитель_Key": w.executor,
+                        "Цех_Key": order.workshop_key or DEFAULTS["workshop"],
+                        "Процент": 100
+                    })
+
+            order_doc["Автоработы"] = works_list
+
+        # Исполнители
+        if executors_list:
+            order_doc["Исполнители"] = executors_list
+
+        # Табличная часть Товары
+        # Для каждого товара получаем его единицу измерения и характеристику
+        sum_goods = 0
+        if order.goods:
+            goods_list = []
+            for i, g in enumerate(order.goods):
+                goods_sum = g.qty * g.price
+                sum_goods += goods_sum
+
+                # Получаем данные номенклатуры для правильной единицы измерения
+                nom_data = await odata_get(f"Catalog_Номенклатура(guid'{g.ref}')?$format=json")
+                unit_key = nom_data.get("БазоваяЕдиницаИзмерения_Key") or DEFAULTS["unit"]
+
+                # Используем переданную характеристику или ищем
+                char_key = g.characteristic_key or "00000000-0000-0000-0000-000000000000"
+                if not g.characteristic_key:
+                    # Сначала ищем характеристику привязанную к номенклатуре
+                    try:
+                        chars = await odata_get(f"Catalog_ХарактеристикиНоменклатуры?$filter=Owner_Key eq guid'{g.ref}'&$top=1&$format=json")
+                        if chars.get("value"):
+                            char_key = chars["value"][0].get("Ref_Key", char_key)
+                    except:
+                        pass
+
+                goods_list.append({
+                    "LineNumber": str(i + 1),
+                    "Номенклатура_Key": g.ref,
+                    "ХарактеристикаНоменклатуры_Key": char_key,
+                    "СкладКомпании_Key": "852b2143-fa83-11e5-9841-6cf049a63e1b",  # Склад запчастей
+                    "ЕдиницаИзмерения_Key": unit_key,
+                    "Количество": int(g.qty),
+                    "Коэффициент": 1,
+                    "Цена": int(g.price),
+                    "Сумма": int(goods_sum),
+                    "СтавкаНДС_Key": "9c8c6fc0-e260-11f0-8e66-000c290904ba",  # НДС 20%
+                    "СуммаНДС": round(goods_sum / 6, 2),
+                    "СуммаВсего": int(goods_sum)
+                })
+            order_doc["Товары"] = goods_list
+
+        # Создаём ЗаказНаряд
+        result = await odata_post("Document_ЗаказНаряд?$format=json", order_doc)
+
+        if "odata.error" in result:
+            return {"success": False, "error": result["odata.error"]["message"]["value"], "type": "ЗаказНаряд"}
+
+        return {
+            "success": True,
+            "type": "ЗаказНаряд",
+            "number": result.get("Number", "").strip(),
+            "ref": result.get("Ref_Key", ""),
+            "date": str(result.get("Date", ""))[:10],
+            "client": order.client_name,
+            "car": order.car_name,
+            "sum_works": sum_works,
+            "sum_goods": sum_goods,
+            "sum": sum_works + sum_goods
+        }
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== CONVERT ZAYAVKA TO ZAKAZ-NARYAD ====================
+
+@app.post("/api/zayavka/{ref}/convert")
+async def convert_zayavka_to_order(ref: str):
+    """Конвертировать ЗаявкаНаРемонт в ЗаказНаряд"""
+    try:
+        # Получаем данные заявки
+        zayavka = await odata_get(f"Document_ЗаявкаНаРемонт(guid'{ref}')?$format=json")
+
+        if not zayavka.get("Ref_Key"):
+            return {"success": False, "error": "Заявка не найдена"}
+
+        # Получаем договор клиента (в заявке может быть пустой)
+        client_key = zayavka.get("Контрагент_Key") or zayavka.get("Заказчик_Key")
+        contract_key = zayavka.get("ДоговорВзаиморасчетов_Key")
+
+        if not contract_key or contract_key == "00000000-0000-0000-0000-000000000000":
+            contracts = await odata_get(f"Catalog_ДоговорыВзаиморасчетов?$filter=Owner_Key eq guid'{client_key}'&$top=1&$format=json")
+            contract_key = contracts.get("value", [{}])[0].get("Ref_Key") if contracts.get("value") else "00000000-0000-0000-0000-000000000000"
+
+        now = datetime.now()
+
+        # Создаём ЗаказНаряд с данными из заявки
+        order_doc = {
+            "Date": now.strftime("%Y-%m-%dT%H:%M:%S"),
+            "Posted": False,
+            "Организация_Key": zayavka.get("Организация_Key") or DEFAULTS["org"],
+            "ПодразделениеКомпании_Key": zayavka.get("ПодразделениеКомпании_Key") or DEFAULTS["division"],
+            "Заказчик_Key": zayavka.get("Заказчик_Key") or client_key,  # Заказчик!
+            "Контрагент_Key": client_key,
+            "ДоговорВзаиморасчетов_Key": contract_key,
+            "ВалютаДокумента_Key": zayavka.get("ВалютаДокумента_Key") or DEFAULTS["currency"],
+            "ВидРемонта_Key": zayavka.get("ВидРемонта_Key") or DEFAULTS["repair_type"],
+            "Цех_Key": zayavka.get("Цех_Key") or DEFAULTS["workshop"],
+            "ТипЦен_Key": zayavka.get("ТипЦен_Key") or DEFAULTS["price_type"],
+            "ТипЦенРабот_Key": zayavka.get("ТипЦенРабот_Key") or DEFAULTS["price_type"],
+            "Автор_Key": DEFAULTS["author"],
+            "КурсДокумента": zayavka.get("КурсДокумента") or 1,
+            "СкладКомпании_Key": DEFAULTS["warehouse"],
+            "Состояние_Key": DEFAULTS["status"],
+            "ХозОперация_Key": DEFAULTS["operation"],
+            "Мастер_Key": zayavka.get("Мастер_Key") or DEFAULTS["master"],
+            "Менеджер_Key": zayavka.get("Менеджер_Key") or DEFAULTS["manager"],
+            "СводныйРемонтныйЗаказ_Key": DEFAULTS["repair_order"],
+            "РегламентированныйУчет": True,
+            "ЗакрыватьЗаказыТолькоПоДанномуЗаказНаряду": True,
+            "СпособЗачетаАвансов": "Автоматически",
+            "ОписаниеПричиныОбращения": zayavka.get("ОписаниеПричиныОбращения") or f"Из заявки {zayavka.get('Number', '').strip()}",
+            "Пробег": zayavka.get("Пробег") or "",
+        }
+
+        # Автомобиль в шапке + табличная часть
+        car_key = zayavka.get("Автомобиль_Key")
+        if car_key and car_key != "00000000-0000-0000-0000-000000000000":
+            order_doc["Автомобиль_Key"] = car_key  # Автомобиль в шапке!
+            order_doc["VIN"] = zayavka.get("VIN") or ""
+            order_doc["ГосНомер"] = zayavka.get("ГосНомер") or ""
+            # Табличная часть Автомобили
+            order_doc["Автомобили"] = [{
+                "LineNumber": "1",
+                "Автомобиль_Key": car_key
+            }]
+
+        # Получаем работы из заявки
+        works_data = await odata_get(f"Document_ЗаявкаНаРемонт(guid'{ref}')/Автоработы?$format=json")
+        if works_data.get("value"):
+            works_list = []
+            executors_list = []
+            for w in works_data.get("value", []):
+                work_id = str(uuid.uuid4())
+                works_list.append({
+                    "LineNumber": w.get("LineNumber"),
+                    "Авторабота_Key": w.get("Авторабота_Key"),
+                    "ИдентификаторРаботы": work_id,
+                    "Количество": w.get("Количество", 1),
+                    "Нормочас_Key": w.get("Нормочас_Key") or "65ce4048-fa7c-11e5-9841-6cf049a63e1b",
+                    "Коэффициент": w.get("Коэффициент", 1),
+                    "Цена": w.get("Цена", 0),
+                    "Сумма": w.get("Сумма", 0),
+                    "СтавкаНДС_Key": w.get("СтавкаНДС_Key") or "9c8c6fc0-e260-11f0-8e66-000c290904ba",
+                    "СуммаНДС": w.get("СуммаНДС", 0),
+                    "СуммаВсего": w.get("СуммаВсего", 0),
+                    "АвторСтроки_Key": DEFAULTS["author"],
+                    "АвторИзмененияСтроки_Key": DEFAULTS["author"],
+                    "СпособРасчетаСтоимостиРаботы": w.get("СпособРасчетаСтоимостиРаботы", "ФиксированнойСуммой")
+                })
+            order_doc["Автоработы"] = works_list
+
+        # Получаем товары из заявки
+        goods_data = await odata_get(f"Document_ЗаявкаНаРемонт(guid'{ref}')/Товары?$format=json")
+        if goods_data.get("value"):
+            goods_list = []
+            for g in goods_data.get("value", []):
+                goods_list.append({
+                    "LineNumber": g.get("LineNumber"),
+                    "Номенклатура_Key": g.get("Номенклатура_Key"),
+                    "ХарактеристикаНоменклатуры_Key": g.get("ХарактеристикаНоменклатуры_Key") or "00000000-0000-0000-0000-000000000000",
+                    "СкладКомпании_Key": g.get("СкладКомпании_Key") or DEFAULTS["warehouse"],
+                    "ЕдиницаИзмерения_Key": g.get("ЕдиницаИзмерения_Key") or DEFAULTS["unit"],
+                    "Количество": g.get("Количество", 1),
+                    "Коэффициент": g.get("Коэффициент", 1),
+                    "Цена": g.get("Цена", 0),
+                    "Сумма": g.get("Сумма", 0),
+                    "СтавкаНДС_Key": g.get("СтавкаНДС_Key") or "9c8c6fc0-e260-11f0-8e66-000c290904ba",
+                    "СуммаНДС": g.get("СуммаНДС", 0),
+                    "СуммаВсего": g.get("СуммаВсего", 0)
+                })
+            order_doc["Товары"] = goods_list
+
+        # Получаем исполнителей из заявки
+        executors_data = await odata_get(f"Document_ЗаявкаНаРемонт(guid'{ref}')/Исполнители?$format=json")
+        if executors_data.get("value"):
+            executors_list = []
+            for e in executors_data.get("value", []):
+                executors_list.append({
+                    "LineNumber": e.get("LineNumber"),
+                    "ИдентификаторРаботы": e.get("ИдентификаторРаботы"),
+                    "Исполнитель_Key": e.get("Исполнитель_Key"),
+                    "Цех_Key": e.get("Цех_Key") or DEFAULTS["workshop"],
+                    "Процент": e.get("Процент", 100)
+                })
+            order_doc["Исполнители"] = executors_list
+
+        # Создаём ЗаказНаряд
+        result = await odata_post("Document_ЗаказНаряд?$format=json", order_doc)
+
+        if "odata.error" in result:
+            return {
+                "success": False,
+                "error": result["odata.error"]["message"]["value"],
+                "zayavka_number": zayavka.get("Number", "").strip()
+            }
+
+        # Получаем имя клиента
+        client_name = ""
+        if client_key:
+            client_data = await odata_get(f"Catalog_Контрагенты(guid'{client_key}')?$format=json")
+            client_name = client_data.get("Description", "")
+
+        # Получаем данные авто
+        car_name = ""
+        car_vin = ""
+        car_plate = ""
+        if car_key and car_key != "00000000-0000-0000-0000-000000000000":
+            car_data = await odata_get(f"Catalog_Автомобили(guid'{car_key}')?$format=json")
+            car_name = car_data.get("Description", "")
+            car_vin = car_data.get("VIN", "")
+            car_plate = zayavka.get("ГосНомер", "")
+
+        return {
+            "success": True,
+            "type": "ЗаказНаряд",
+            "zayavka_number": zayavka.get("Number", "").strip(),
+            "zayavka_ref": ref,
+            "order_number": result.get("Number", "").strip(),
+            "order_ref": result.get("Ref_Key", ""),
+            "date": str(result.get("Date", ""))[:10],
+            "client": client_name,
+            "car": car_name,
+            "car_vin": car_vin,
+            "car_plate": car_plate,
+            "mileage": zayavka.get("Пробег", "")
         }
 
     except Exception as e:

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Помощник механика</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2563eb;
+            --purple: #8b5cf6;
+            --purple-dark: #6d28d9;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-500: #6b7280;
+            --gray-700: #374151;
+            --gray-900: #111827;
+            --danger: #ef4444;
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-top: env(safe-area-inset-top, 0px);
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: -webkit-fill-available;
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+            color: white;
+            padding: 20px;
+            padding-top: calc(20px + var(--safe-top));
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .chat-header-title {
+            font-weight: 600;
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+        .chat-header-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: var(--gray-100);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .chat-message {
+            max-width: 85%;
+            padding: 14px 18px;
+            border-radius: 20px;
+            font-size: 16px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .chat-message.user {
+            background: var(--purple);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 6px;
+        }
+        .chat-message.assistant {
+            background: white;
+            color: var(--gray-900);
+            align-self: flex-start;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .chat-message.typing {
+            background: white;
+            color: var(--gray-500);
+            font-style: italic;
+        }
+        .chat-message.error {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+        .chat-message img {
+            max-width: 100%;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .chat-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px 16px;
+            background: white;
+            border-top: 1px solid var(--gray-200);
+            flex-shrink: 0;
+        }
+        .chat-suggestion {
+            padding: 10px 16px;
+            background: var(--gray-100);
+            border: 1px solid var(--gray-200);
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .chat-suggestion:hover {
+            background: var(--gray-200);
+        }
+        .chat-suggestion:active {
+            background: var(--gray-200);
+        }
+
+        .chat-image-preview {
+            padding: 8px 16px;
+            background: white;
+            display: none;
+            flex-shrink: 0;
+        }
+        .chat-image-preview.has-image {
+            display: block;
+        }
+        .chat-image-preview-container {
+            display: inline-block;
+            position: relative;
+        }
+        .chat-image-preview img {
+            max-height: 120px;
+            border-radius: 12px;
+        }
+        .chat-image-remove {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--danger);
+            color: white;
+            border: 3px solid white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .chat-input-area {
+            padding: 12px 16px;
+            padding-bottom: calc(12px + var(--safe-bottom));
+            background: white;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid var(--gray-200);
+            border-radius: 24px;
+            font-size: 16px;
+            resize: none;
+            min-height: 52px;
+            max-height: 120px;
+            line-height: 1.4;
+            font-family: inherit;
+        }
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--purple);
+        }
+        .chat-input::placeholder {
+            color: var(--gray-500);
+        }
+
+        .chat-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, background 0.2s;
+        }
+        .chat-btn:active {
+            transform: scale(0.95);
+        }
+
+        .chat-photo-btn {
+            background: var(--gray-100);
+            border: 2px solid var(--gray-200);
+            color: var(--gray-700);
+        }
+        .chat-photo-btn input {
+            display: none;
+        }
+        .chat-photo-btn.has-image {
+            background: var(--purple);
+            border-color: var(--purple);
+            color: white;
+        }
+
+        .chat-send {
+            background: var(--purple);
+            color: white;
+        }
+        .chat-send:disabled {
+            background: var(--gray-200);
+            color: var(--gray-500);
+            cursor: not-allowed;
+        }
+
+        /* Tablet */
+        @media (min-width: 768px) {
+            .chat-header {
+                padding: 28px;
+            }
+            .chat-header-title {
+                font-size: 26px;
+            }
+            .chat-message {
+                max-width: 70%;
+                font-size: 17px;
+            }
+            .chat-suggestions {
+                justify-content: center;
+            }
+            .chat-suggestion {
+                font-size: 15px;
+                padding: 12px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-header-title">🤖 AI Помощник</div>
+            <div class="chat-header-subtitle">Советы по ремонту автомобилей</div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            <div class="chat-message assistant">Привет! Я AI-помощник для механиков. Могу подсказать:
+
+• Порядок выполнения работ
+• Моменты затяжки и допуски
+• Диагностику по симптомам
+• Особенности конкретных марок
+
+📷 Отправьте фото детали — помогу определить её состояние!</div>
+        </div>
+
+        <div class="chat-suggestions" id="chat-suggestions">
+            <div class="chat-suggestion" onclick="askSuggestion('Как заменить тормозные колодки?')">Замена колодок</div>
+            <div class="chat-suggestion" onclick="askSuggestion('Момент затяжки колёсных болтов')">Момент затяжки</div>
+            <div class="chat-suggestion" onclick="askSuggestion('Что это за деталь?')">📷 Распознать деталь</div>
+        </div>
+
+        <div id="chat-image-preview" class="chat-image-preview">
+            <div class="chat-image-preview-container">
+                <img id="chat-preview-img" src="">
+                <button class="chat-image-remove" onclick="removeChatImage()">×</button>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <button class="chat-btn chat-photo-btn" id="chat-photo-btn" onclick="document.getElementById('chat-image-input').click()">
+                📷
+                <input type="file" id="chat-image-input" accept="image/*" capture="environment" onchange="handleChatImage(event)">
+            </button>
+            <textarea id="chat-input" class="chat-input" placeholder="Задайте вопрос..." rows="1" oninput="autoResize(this)"></textarea>
+            <button class="chat-btn chat-send" id="chat-send" onclick="sendChatMessage()">➤</button>
+        </div>
+    </div>
+
+    <script>
+        const API = '';
+        let chatSessionId = 'mechanic-' + Date.now();
+        let chatImageBase64 = null;
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        function handleChatImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                chatImageBase64 = e.target.result.split(',')[1];
+                document.getElementById('chat-preview-img').src = e.target.result;
+                document.getElementById('chat-image-preview').classList.add('has-image');
+                document.getElementById('chat-photo-btn').classList.add('has-image');
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function removeChatImage() {
+            chatImageBase64 = null;
+            document.getElementById('chat-image-preview').classList.remove('has-image');
+            document.getElementById('chat-photo-btn').classList.remove('has-image');
+            document.getElementById('chat-preview-img').src = '';
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim() || (chatImageBase64 ? 'Что на этом фото? Дай диагностику.' : '');
+            if (!message && !chatImageBase64) return;
+
+            const messagesContainer = document.getElementById('chat-messages');
+            const suggestions = document.getElementById('chat-suggestions');
+
+            // Hide suggestions after first message
+            suggestions.style.display = 'none';
+
+            // Add user message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'chat-message user';
+            if (chatImageBase64) {
+                userDiv.innerHTML = `<img src="data:image/jpeg;base64,${chatImageBase64}">${message}`;
+            } else {
+                userDiv.textContent = message;
+            }
+            messagesContainer.appendChild(userDiv);
+
+            // Clear input
+            input.value = '';
+            input.style.height = 'auto';
+            const imageToSend = chatImageBase64;
+            removeChatImage();
+
+            // Typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-message assistant typing';
+            typingDiv.textContent = imageToSend ? 'Анализирую фото...' : 'Думаю...';
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            try {
+                const res = await fetch(`${API}/api/assistant/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: chatSessionId,
+                        image_base64: imageToSend
+                    })
+                });
+
+                typingDiv.remove();
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const assistantDiv = document.createElement('div');
+                    assistantDiv.className = 'chat-message assistant';
+                    assistantDiv.textContent = data.response;
+                    messagesContainer.appendChild(assistantDiv);
+                } else {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'chat-message error';
+                    errorDiv.textContent = 'Ошибка получения ответа';
+                    messagesContainer.appendChild(errorDiv);
+                }
+            } catch (e) {
+                typingDiv.remove();
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'chat-message error';
+                errorDiv.textContent = 'Ошибка сети: ' + e.message;
+                messagesContainer.appendChild(errorDiv);
+            }
+
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function askSuggestion(text) {
+            if (text.includes('📷') || text.includes('деталь')) {
+                document.getElementById('chat-input').value = text;
+                document.getElementById('chat-image-input').click();
+            } else {
+                document.getElementById('chat-input').value = text;
+                sendChatMessage();
+            }
+        }
+
+        // Handle Enter key
+        document.getElementById('chat-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        });
+
+        // Focus input on load
+        document.getElementById('chat-input').focus();
+    </script>
+</body>
+</html>

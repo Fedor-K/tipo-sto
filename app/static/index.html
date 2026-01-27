@@ -1,0 +1,2597 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIPO-STO CRM</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--gray-900);
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid var(--gray-700);
+            margin-bottom: 20px;
+        }
+        .logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+        }
+        .logo span {
+            font-size: 12px;
+            color: var(--gray-400);
+        }
+
+        .nav-menu { list-style: none; }
+        .nav-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--gray-400);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover {
+            background: var(--gray-800);
+            color: white;
+        }
+        .nav-item.active {
+            background: var(--gray-800);
+            color: white;
+            border-left-color: var(--primary);
+        }
+        .nav-item .icon { font-size: 18px; width: 24px; text-align: center; }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            margin-left: 240px;
+            padding: 24px;
+        }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .page-header h2 {
+            font-size: 24px;
+            color: var(--gray-900);
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-200);
+            font-weight: 600;
+            color: var(--gray-700);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-body { padding: 20px; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-card .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+        .stat-card .stat-icon.blue { background: #eff6ff; }
+        .stat-card .stat-icon.green { background: #ecfdf5; }
+        .stat-card .stat-icon.yellow { background: #fffbeb; }
+        .stat-card .stat-icon.purple { background: #f5f3ff; }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        .stat-card .stat-label {
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        /* Search */
+        .search-box {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* Table */
+        .table-container { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        th {
+            background: var(--gray-50);
+            font-weight: 600;
+            color: var(--gray-600);
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+        tr:hover { background: var(--gray-50); }
+        td { color: var(--gray-700); }
+
+        .client-name {
+            font-weight: 500;
+            color: var(--gray-900);
+            cursor: pointer;
+        }
+        .client-name:hover { color: var(--primary); }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-success { background: #ecfdf5; color: #065f46; }
+        .badge-warning { background: #fffbeb; color: #92400e; }
+        .badge-info { background: #eff6ff; color: #1e40af; }
+        .badge-gray { background: var(--gray-100); color: var(--gray-600); }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+        .btn-secondary:hover { background: var(--gray-200); }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+        /* Detail View */
+        .detail-header {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+        .detail-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 600;
+        }
+        .detail-info h3 {
+            font-size: 24px;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+        .detail-meta {
+            display: flex;
+            gap: 20px;
+            color: var(--gray-500);
+            font-size: 14px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        .info-item label {
+            display: block;
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        .info-item .value {
+            font-size: 15px;
+            color: var(--gray-900);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid var(--gray-200);
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            color: var(--gray-500);
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .tab:hover { color: var(--gray-700); }
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Order Card */
+        .order-card {
+            border: 1px solid var(--gray-200);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .order-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+        }
+        .order-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .order-number {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .order-date { color: var(--gray-500); font-size: 14px; }
+        .order-car { color: var(--gray-600); font-size: 14px; margin-bottom: 8px; }
+        .order-sum {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { font-size: 18px; }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray-400);
+        }
+        .modal-close:hover { color: var(--gray-600); }
+        .modal-body { padding: 20px; }
+
+        /* Form */
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--gray-700);
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .form-row { display: flex; gap: 16px; }
+        .form-row .form-group { flex: 1; }
+
+        /* Results dropdown */
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            z-index: 100;
+        }
+        .search-results.show { display: block; }
+        .search-result-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .search-result-item:hover { background: var(--gray-50); }
+        .search-result-item:last-child { border-bottom: none; }
+        .search-result-item .name { font-weight: 500; }
+        .search-result-item .meta { font-size: 13px; color: var(--gray-500); }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray-500);
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+
+        /* Back button */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--gray-500);
+            cursor: pointer;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .back-btn:hover { color: var(--primary); }
+
+        /* Works/Goods list */
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .item-row:last-child { border-bottom: none; }
+        .item-name { flex: 1; }
+        .item-qty { color: var(--gray-500); margin: 0 16px; }
+        .item-sum { font-weight: 500; min-width: 100px; text-align: right; }
+
+        /* Kanban Board */
+        .kanban-board {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding-bottom: 16px;
+            min-height: calc(100vh - 150px);
+        }
+        .kanban-column {
+            flex: 0 0 300px;
+            background: var(--gray-100);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 150px);
+        }
+        .kanban-column-header {
+            padding: 16px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid;
+        }
+        .kanban-column-header .count {
+            background: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .kanban-column.new .kanban-column-header { border-color: var(--primary); color: var(--primary); }
+        .kanban-column.new .kanban-column-header .count { color: var(--primary); }
+        .kanban-column.progress .kanban-column-header { border-color: var(--warning); color: #b45309; }
+        .kanban-column.progress .kanban-column-header .count { color: #b45309; }
+        .kanban-column.ready .kanban-column-header { border-color: var(--success); color: #047857; }
+        .kanban-column.ready .kanban-column-header .count { color: #047857; }
+        .kanban-column.done .kanban-column-header { border-color: var(--gray-400); color: var(--gray-600); }
+        .kanban-column.done .kanban-column-header .count { color: var(--gray-600); }
+
+        .kanban-cards {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        .kanban-card {
+            background: white;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+        .kanban-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        .kanban-column.new .kanban-card { border-left-color: var(--primary); }
+        .kanban-column.progress .kanban-card { border-left-color: var(--warning); }
+        .kanban-column.ready .kanban-card { border-left-color: var(--success); }
+        .kanban-column.done .kanban-card { border-left-color: var(--gray-400); }
+
+        .kanban-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .kanban-card-number {
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 14px;
+        }
+        .kanban-card-date {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+        .kanban-card-client {
+            font-size: 14px;
+            color: var(--gray-700);
+            margin-bottom: 6px;
+        }
+        .kanban-card-car {
+            font-size: 13px;
+            color: var(--gray-500);
+            margin-bottom: 8px;
+        }
+        .kanban-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .kanban-card-sum {
+            font-weight: 600;
+            color: var(--success);
+        }
+        .kanban-card-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .kanban-action {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: var(--gray-100);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .kanban-action:hover {
+            background: var(--gray-200);
+        }
+        .kanban-action.move-right:hover { background: #ecfdf5; }
+        .kanban-action.move-left:hover { background: #fef3c7; }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .kanban-column { flex: 0 0 280px; }
+        }
+
+        /* DVI Inspection Styles */
+        .dvi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .dvi-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dvi-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        .dvi-card-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .dvi-card-id {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+        .dvi-card-date {
+            font-size: 13px;
+            color: var(--gray-500);
+        }
+        .dvi-card-info {
+            margin-bottom: 12px;
+        }
+        .dvi-card-car {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .dvi-card-client {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+        .dvi-status-bar {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+        }
+        .dvi-status-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .dvi-status-item.ok { color: var(--success); }
+        .dvi-status-item.attention { color: var(--warning); }
+        .dvi-status-item.urgent { color: var(--danger); }
+
+        /* DVI Form */
+        .dvi-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .dvi-category-btn {
+            padding: 16px;
+            background: var(--gray-50);
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .dvi-category-btn:hover {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+        .dvi-category-btn.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+        .dvi-category-btn .icon {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .dvi-category-btn .name {
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        /* DVI Items */
+        .dvi-items-list {
+            border: 1px solid var(--gray-200);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .dvi-item {
+            padding: 16px;
+            border-bottom: 1px solid var(--gray-100);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dvi-item:last-child { border-bottom: none; }
+        .dvi-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .dvi-item-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .dvi-item-status.ok { background: var(--success); }
+        .dvi-item-status.attention { background: var(--warning); }
+        .dvi-item-status.urgent { background: var(--danger); }
+        .dvi-item-name { font-weight: 500; }
+        .dvi-item-notes {
+            font-size: 13px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+        .dvi-item-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dvi-item-photos {
+            display: flex;
+            gap: 4px;
+        }
+        .dvi-item-photo {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .dvi-item-cost {
+            font-weight: 500;
+            color: var(--gray-700);
+            min-width: 80px;
+            text-align: right;
+        }
+        .dvi-item-approve {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .dvi-item-approve.approved {
+            background: #ecfdf5;
+            color: #047857;
+        }
+        .dvi-item-approve.pending {
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        /* Photo upload */
+        .photo-upload-area {
+            border: 2px dashed var(--gray-300);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .photo-upload-area:hover {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+        .photo-upload-area input {
+            display: none;
+        }
+        .photo-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .photo-preview-item {
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+        .photo-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .photo-preview-item .remove {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* Status buttons */
+        .status-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .status-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .status-btn:hover { border-color: var(--gray-300); }
+        .status-btn.active.ok {
+            border-color: var(--success);
+            background: #ecfdf5;
+            color: #047857;
+        }
+        .status-btn.active.attention {
+            border-color: var(--warning);
+            background: #fffbeb;
+            color: #b45309;
+        }
+        .status-btn.active.urgent {
+            border-color: var(--danger);
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
+        /* DVI Summary */
+        .dvi-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .dvi-summary-item {
+            text-align: center;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: 10px;
+        }
+        .dvi-summary-item .count {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .dvi-summary-item .label {
+            font-size: 13px;
+            color: var(--gray-500);
+        }
+        .dvi-summary-item.ok .count { color: var(--success); }
+        .dvi-summary-item.attention .count { color: var(--warning); }
+        .dvi-summary-item.urgent .count { color: var(--danger); }
+
+        /* Client DVI Page */
+        .dvi-client-header {
+            text-align: center;
+            padding: 24px;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .dvi-client-header h2 {
+            margin-bottom: 8px;
+        }
+        .dvi-client-header .car-info {
+            color: var(--gray-600);
+        }
+        .approve-all-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 16px 32px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <h1>TIPO-STO</h1>
+            <span>CRM для автосервиса</span>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item active" data-page="dashboard">
+                <span class="icon">📊</span> Дашборд
+            </li>
+            <li class="nav-item" data-page="clients">
+                <span class="icon">👥</span> Клиенты
+            </li>
+            <li class="nav-item" data-page="kanban">
+                <span class="icon">📌</span> Канбан
+            </li>
+            <li class="nav-item" data-page="orders">
+                <span class="icon">📋</span> Заказы
+            </li>
+            <li class="nav-item" data-page="cars">
+                <span class="icon">🚗</span> Автомобили
+            </li>
+            <li class="nav-item" data-page="dvi">
+                <span class="icon">📸</span> DVI Осмотр
+            </li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Dashboard Page -->
+        <div id="page-dashboard" class="page active">
+            <div class="page-header">
+                <h2>Дашборд</h2>
+                <button class="btn btn-primary" onclick="openNewOrderModal()">
+                    + Новый заказ
+                </button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">👥</div>
+                    <div class="stat-value" id="stat-clients">-</div>
+                    <div class="stat-label">Клиентов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">📋</div>
+                    <div class="stat-value" id="stat-orders">-</div>
+                    <div class="stat-label">Исторических заказов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon yellow">🚗</div>
+                    <div class="stat-value" id="stat-cars">-</div>
+                    <div class="stat-label">Связей клиент-авто</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">📦</div>
+                    <div class="stat-value" id="stat-details">-</div>
+                    <div class="stat-label">Заказов с деталями</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    Последние заказы
+                    <button class="btn btn-sm btn-secondary" onclick="navigateTo('orders')">Все заказы →</button>
+                </div>
+                <div class="card-body">
+                    <div id="recent-orders" class="loading">
+                        <div class="spinner"></div>
+                        Загрузка...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kanban Page -->
+        <div id="page-kanban" class="page">
+            <div class="page-header">
+                <h2>Канбан-доска</h2>
+                <button class="btn btn-primary" onclick="openNewOrderModal()">+ Новый заказ</button>
+            </div>
+
+            <div class="kanban-board" id="kanban-board">
+                <div class="kanban-column new">
+                    <div class="kanban-column-header">
+                        <span>📥 Новые</span>
+                        <span class="count" id="kanban-count-new">0</span>
+                    </div>
+                    <div class="kanban-cards" id="kanban-new"></div>
+                </div>
+
+                <div class="kanban-column progress">
+                    <div class="kanban-column-header">
+                        <span>🔧 В работе</span>
+                        <span class="count" id="kanban-count-progress">0</span>
+                    </div>
+                    <div class="kanban-cards" id="kanban-progress"></div>
+                </div>
+
+                <div class="kanban-column ready">
+                    <div class="kanban-column-header">
+                        <span>✅ Готово</span>
+                        <span class="count" id="kanban-count-ready">0</span>
+                    </div>
+                    <div class="kanban-cards" id="kanban-ready"></div>
+                </div>
+
+                <div class="kanban-column done">
+                    <div class="kanban-column-header">
+                        <span>📦 Выдано</span>
+                        <span class="count" id="kanban-count-done">0</span>
+                    </div>
+                    <div class="kanban-cards" id="kanban-done"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clients Page -->
+        <div id="page-clients" class="page">
+            <div class="page-header">
+                <h2>Клиенты</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="search-box">
+                        <input type="text" id="client-search" placeholder="Поиск клиента по имени..." oninput="searchClients(this.value)">
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Клиент</th>
+                                    <th>Код</th>
+                                    <th>ИНН</th>
+                                    <th>Телефон</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-table">
+                                <tr><td colspan="4" class="loading"><div class="spinner"></div>Загрузка...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Client Detail Page -->
+        <div id="page-client-detail" class="page">
+            <div class="back-btn" onclick="navigateTo('clients')">← Назад к списку</div>
+            <div id="client-detail-content">
+                <div class="loading"><div class="spinner"></div>Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- Orders Page -->
+        <div id="page-orders" class="page">
+            <div class="page-header">
+                <h2>Заказы</h2>
+                <button class="btn btn-primary" onclick="openNewOrderModal()">+ Новый заказ</button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="search-box">
+                        <input type="text" id="order-search" placeholder="Поиск по номеру заказа...">
+                    </div>
+                    <div id="orders-list" class="loading">
+                        <div class="spinner"></div>
+                        Загрузка...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Detail Page -->
+        <div id="page-order-detail" class="page">
+            <div class="back-btn" onclick="navigateTo('orders')">← Назад к списку</div>
+            <div id="order-detail-content">
+                <div class="loading"><div class="spinner"></div>Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- Cars Page -->
+        <div id="page-cars" class="page">
+            <div class="page-header">
+                <h2>Автомобили</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="search-box">
+                        <input type="text" id="car-search" placeholder="Поиск по гос.номеру или VIN..." oninput="searchCars(this.value)">
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Автомобиль</th>
+                                    <th>Гос.номер</th>
+                                    <th>VIN</th>
+                                    <th>Год</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cars-table">
+                                <tr><td colspan="4" class="loading"><div class="spinner"></div>Загрузка...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DVI Page (List) -->
+        <div id="page-dvi" class="page">
+            <div class="page-header">
+                <h2>DVI Осмотры</h2>
+                <button class="btn btn-primary" onclick="openNewDviModal()">+ Новый осмотр</button>
+            </div>
+
+            <div id="dvi-list" class="dvi-grid">
+                <div class="loading"><div class="spinner"></div>Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- DVI Detail Page -->
+        <div id="page-dvi-detail" class="page">
+            <div class="back-btn" onclick="navigateTo('dvi')">← Назад к списку</div>
+            <div id="dvi-detail-content">
+                <div class="loading"><div class="spinner"></div>Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- DVI Edit Page (Add Items) -->
+        <div id="page-dvi-edit" class="page">
+            <div class="back-btn" onclick="backFromDviEdit()">← Назад к осмотру</div>
+            <div id="dvi-edit-content">
+                <div class="loading"><div class="spinner"></div>Загрузка...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- New Order Modal -->
+    <div id="new-order-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Новый заказ</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="position: relative;">
+                    <label>Клиент *</label>
+                    <input type="text" id="modal-client-search" placeholder="Начните вводить имя..." oninput="searchClientsModal(this.value)">
+                    <div id="modal-client-results" class="search-results"></div>
+                    <input type="hidden" id="modal-client-ref">
+                </div>
+
+                <div class="form-group">
+                    <label>Автомобиль</label>
+                    <select id="modal-car-select" disabled>
+                        <option value="">Сначала выберите клиента</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Комментарий / причина обращения</label>
+                    <textarea id="modal-comment" placeholder="Опишите причину обращения..."></textarea>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%;" onclick="createOrder()">
+                    Создать заказ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New DVI Modal -->
+    <div id="new-dvi-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Новый осмотр</h3>
+                <button class="modal-close" onclick="closeDviModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Гос.номер *</label>
+                    <input type="text" id="dvi-car-plate" placeholder="А123БВ777">
+                </div>
+
+                <div class="form-group">
+                    <label>VIN</label>
+                    <input type="text" id="dvi-car-vin" placeholder="WDD2211861A216643">
+                </div>
+
+                <div class="form-group">
+                    <label>Пробег</label>
+                    <input type="number" id="dvi-mileage" placeholder="95000">
+                </div>
+
+                <div class="form-group">
+                    <label>Телефон клиента (для отправки ссылки)</label>
+                    <input type="tel" id="dvi-client-phone" placeholder="+7 999 123 45 67">
+                </div>
+
+                <div class="form-group">
+                    <label>Механик</label>
+                    <input type="text" id="dvi-mechanic" placeholder="Иванов И.И.">
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%;" onclick="createDvi()">
+                    Начать осмотр
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add DVI Item Modal -->
+    <div id="add-dvi-item-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Добавить пункт осмотра</h3>
+                <button class="modal-close" onclick="closeDviItemModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Категория</label>
+                    <select id="dvi-item-category">
+                        <option value="engine">🔧 Двигатель</option>
+                        <option value="brakes">🛑 Тормоза</option>
+                        <option value="suspension">🔩 Подвеска</option>
+                        <option value="tires">🛞 Шины</option>
+                        <option value="fluids">💧 Жидкости</option>
+                        <option value="lights">💡 Освещение</option>
+                        <option value="body">🚗 Кузов</option>
+                        <option value="interior">🪑 Салон</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Название пункта *</label>
+                    <input type="text" id="dvi-item-name" placeholder="Уровень масла, Передние колодки...">
+                </div>
+
+                <div class="form-group">
+                    <label>Статус *</label>
+                    <div class="status-buttons">
+                        <button class="status-btn ok" onclick="selectDviStatus('ok', this)">✅ ОК</button>
+                        <button class="status-btn attention" onclick="selectDviStatus('attention', this)">⚠️ Внимание</button>
+                        <button class="status-btn urgent" onclick="selectDviStatus('urgent', this)">🔴 Срочно</button>
+                    </div>
+                    <input type="hidden" id="dvi-item-status" value="">
+                </div>
+
+                <div class="form-group">
+                    <label>Комментарий</label>
+                    <textarea id="dvi-item-notes" placeholder="Износ 80%, требуется замена..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Рекомендуемая работа</label>
+                    <input type="text" id="dvi-item-work" placeholder="Замена тормозных колодок">
+                </div>
+
+                <div class="form-group">
+                    <label>Примерная стоимость</label>
+                    <input type="number" id="dvi-item-cost" placeholder="5000">
+                </div>
+
+                <div class="form-group">
+                    <label>Фото</label>
+                    <div class="photo-upload-area" onclick="document.getElementById('dvi-photo-input').click()">
+                        📷 Нажмите для загрузки или перетащите фото
+                        <input type="file" id="dvi-photo-input" accept="image/*" multiple onchange="handlePhotoUpload(event)">
+                    </div>
+                    <div id="photo-preview" class="photo-preview"></div>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%;" onclick="addDviItem()">
+                    Добавить пункт
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Viewer Modal -->
+    <div id="photo-viewer-modal" class="modal" onclick="closePhotoViewer()">
+        <div style="max-width: 90%; max-height: 90%; display: flex; align-items: center; justify-content: center;">
+            <img id="photo-viewer-img" src="" style="max-width: 100%; max-height: 90vh; border-radius: 8px;">
+        </div>
+    </div>
+
+    <!-- Create Order from DVI Modal -->
+    <div id="create-order-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Создать заказ из осмотра</h3>
+                <button class="modal-close" onclick="closeCreateOrderModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="position: relative;">
+                    <label>Клиент *</label>
+                    <input type="text" id="order-client-search" placeholder="Поиск клиента..." oninput="searchClientsForOrder(this.value)">
+                    <div id="order-client-results" class="search-results"></div>
+                    <input type="hidden" id="order-client-ref">
+                </div>
+
+                <div id="work-mappings-container">
+                    <label style="font-weight: 600; margin-bottom: 12px; display: block;">Сопоставление работ:</label>
+                    <div id="work-mappings-list">
+                        <div class="loading"><div class="spinner"></div>Загрузка...</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--gray-200);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="font-weight: 600;">Итого:</span>
+                        <span id="order-total-sum" style="font-weight: 600; color: var(--success);">0 ₽</span>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="createOrderFromDvi()">
+                        Создать заказ в 1С
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .work-mapping-item {
+            background: var(--gray-50);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .work-mapping-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .work-mapping-dvi {
+            flex: 1;
+        }
+        .work-mapping-dvi .name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .work-mapping-dvi .status {
+            font-size: 13px;
+        }
+        .work-mapping-dvi .status.urgent { color: var(--danger); }
+        .work-mapping-dvi .status.attention { color: var(--warning); }
+        .work-mapping-select {
+            margin-top: 8px;
+        }
+        .work-mapping-select select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .work-mapping-price {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .work-mapping-price input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .work-mapping-price input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+    </style>
+
+    <script>
+        const API = '';
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const page = item.dataset.page;
+                navigateTo(page);
+            });
+        });
+
+        function navigateTo(page) {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+            const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
+            if (navItem) navItem.classList.add('active');
+
+            document.getElementById(`page-${page}`).classList.add('active');
+
+            // Load data for page
+            if (page === 'kanban') loadKanban();
+            if (page === 'clients') loadClients();
+            if (page === 'orders') loadOrders();
+            if (page === 'cars') loadCars();
+            if (page === 'dvi') loadDviList();
+        }
+
+        // Dashboard
+        async function loadDashboard() {
+            try {
+                const res = await fetch(`${API}/api/stats`);
+                const data = await res.json();
+
+                document.getElementById('stat-clients').textContent =
+                    data.legacy?.clients_with_history?.toLocaleString() || '-';
+                document.getElementById('stat-orders').textContent =
+                    data.legacy?.total_historical_orders?.toLocaleString() || '-';
+                document.getElementById('stat-cars').textContent =
+                    data.legacy?.client_car_mappings?.toLocaleString() || '-';
+                document.getElementById('stat-details').textContent =
+                    data.legacy?.order_details_count?.toLocaleString() || '-';
+            } catch (e) {
+                console.error('Error loading stats:', e);
+            }
+
+            loadRecentOrders();
+        }
+
+        // Kanban
+        const KANBAN_STATUSES = {
+            'new': ['Новый', 'НеУказано', null, ''],
+            'progress': ['В работе', 'ВРаботе', 'Принят'],
+            'ready': ['Готов', 'Готово', 'Выполнен'],
+            'done': ['Выдан', 'Закрыт', 'Завершен']
+        };
+
+        let kanbanOrders = [];
+
+        async function loadKanban() {
+            // Clear columns
+            ['new', 'progress', 'ready', 'done'].forEach(col => {
+                document.getElementById(`kanban-${col}`).innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            });
+
+            try {
+                const res = await fetch(`${API}/api/orders?limit=100`);
+                kanbanOrders = await res.json();
+
+                // Group by status
+                const grouped = { new: [], progress: [], ready: [], done: [] };
+
+                kanbanOrders.forEach(order => {
+                    const status = order.status || 'НеУказано';
+                    let column = 'new';
+
+                    for (const [col, statuses] of Object.entries(KANBAN_STATUSES)) {
+                        if (statuses.some(s => s && status.toLowerCase().includes(s.toLowerCase()))) {
+                            column = col;
+                            break;
+                        }
+                    }
+
+                    grouped[column].push(order);
+                });
+
+                // Render columns
+                for (const [col, orders] of Object.entries(grouped)) {
+                    const container = document.getElementById(`kanban-${col}`);
+                    document.getElementById(`kanban-count-${col}`).textContent = orders.length;
+
+                    if (orders.length === 0) {
+                        container.innerHTML = '<div style="text-align: center; color: var(--gray-400); padding: 20px;">Нет заказов</div>';
+                        continue;
+                    }
+
+                    container.innerHTML = orders.map(o => renderKanbanCard(o, col)).join('');
+                }
+            } catch (e) {
+                console.error('Error loading kanban:', e);
+                ['new', 'progress', 'ready', 'done'].forEach(col => {
+                    document.getElementById(`kanban-${col}`).innerHTML = '<div style="color: var(--danger); padding: 20px;">Ошибка загрузки</div>';
+                });
+            }
+        }
+
+        function renderKanbanCard(order, column) {
+            const columns = ['new', 'progress', 'ready', 'done'];
+            const colIndex = columns.indexOf(column);
+            const canMoveLeft = colIndex > 0;
+            const canMoveRight = colIndex < columns.length - 1;
+
+            return `
+                <div class="kanban-card" onclick="showOrderDetail('${order.ref}')">
+                    <div class="kanban-card-header">
+                        <span class="kanban-card-number">${order.number}</span>
+                        <span class="kanban-card-date">${formatDate(order.date)}</span>
+                    </div>
+                    <div class="kanban-card-client">${order.client_name || 'Клиент не указан'}</div>
+                    <div class="kanban-card-car">${order.car_name || order.car_plate || ''}</div>
+                    <div class="kanban-card-footer">
+                        <span class="kanban-card-sum">${formatMoney(order.sum)}</span>
+                        <div class="kanban-card-actions" onclick="event.stopPropagation()">
+                            ${canMoveLeft ? `<button class="kanban-action move-left" onclick="moveOrder('${order.ref}', '${columns[colIndex - 1]}')" title="Назад">←</button>` : ''}
+                            ${canMoveRight ? `<button class="kanban-action move-right" onclick="moveOrder('${order.ref}', '${columns[colIndex + 1]}')" title="Далее">→</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function moveOrder(ref, targetColumn) {
+            try {
+                const res = await fetch(`${API}/api/orders/${ref}/status?column=${targetColumn}`, {
+                    method: 'PATCH'
+                });
+
+                if (res.ok) {
+                    // Reload Kanban board
+                    loadKanban();
+                } else {
+                    const err = await res.json();
+                    alert('Ошибка: ' + (err.detail || 'Не удалось изменить статус'));
+                }
+            } catch (e) {
+                alert('Ошибка обновления статуса');
+                console.error(e);
+            }
+        }
+
+        async function loadRecentOrders() {
+            const container = document.getElementById('recent-orders');
+            try {
+                const res = await fetch(`${API}/api/orders?limit=5`);
+                const orders = await res.json();
+
+                if (orders.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div>Нет заказов</div>';
+                    return;
+                }
+
+                container.innerHTML = orders.map(o => `
+                    <div class="order-card" onclick="showOrderDetail('${o.ref}')">
+                        <div class="order-card-header">
+                            <span class="order-number">${o.number}</span>
+                            <span class="order-date">${formatDate(o.date)}</span>
+                        </div>
+                        <div class="order-car">${o.client_name || 'Клиент не указан'}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="badge ${o.is_legacy ? 'badge-gray' : 'badge-info'}">${o.is_legacy ? 'История' : 'Активный'}</span>
+                            <span class="order-sum">${formatMoney(o.sum)}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Ошибка загрузки</div>';
+            }
+        }
+
+        // Clients
+        async function loadClients(search = '') {
+            const tbody = document.getElementById('clients-table');
+            tbody.innerHTML = '<tr><td colspan="4" class="loading"><div class="spinner"></div>Загрузка...</td></tr>';
+
+            try {
+                const url = search
+                    ? `${API}/api/clients?search=${encodeURIComponent(search)}&limit=50`
+                    : `${API}/api/clients?limit=50`;
+                const res = await fetch(url);
+                const clients = await res.json();
+
+                if (clients.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Клиенты не найдены</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = clients.map(c => `
+                    <tr>
+                        <td><span class="client-name" onclick="showClientDetail('${c.ref}')">${c.name}</span></td>
+                        <td>${c.code || '-'}</td>
+                        <td>${c.inn || '-'}</td>
+                        <td>${c.phone || '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Ошибка загрузки</td></tr>';
+            }
+        }
+
+        let searchTimeout;
+        function searchClients(query) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => loadClients(query), 300);
+        }
+
+        async function showClientDetail(ref) {
+            navigateTo('client-detail');
+            const container = document.getElementById('client-detail-content');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div>Загрузка...</div>';
+
+            try {
+                const res = await fetch(`${API}/api/clients/${ref}`);
+                const client = await res.json();
+
+                container.innerHTML = `
+                    <div class="detail-header">
+                        <div class="detail-avatar">${client.name.charAt(0).toUpperCase()}</div>
+                        <div class="detail-info">
+                            <h3>${client.name}</h3>
+                            <div class="detail-meta">
+                                <span>Код: ${client.code || '-'}</span>
+                                <span>Заказов: ${client.total_orders}</span>
+                                <span>Сумма: ${formatMoney(client.total_sum)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <label>ИНН</label>
+                                    <div class="value">${client.inn || '-'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <label>Телефон</label>
+                                    <div class="value">${client.phone || '-'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <label>Email</label>
+                                    <div class="value">${client.email || '-'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <label>Комментарий</label>
+                                    <div class="value">${client.comment || '-'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab(this, 'client-orders')">Заказы (${client.orders?.length || 0})</div>
+                        <div class="tab" onclick="switchTab(this, 'client-cars')">Автомобили (${client.cars?.length || 0})</div>
+                    </div>
+
+                    <div id="client-orders" class="tab-content active">
+                        ${client.orders?.length ? client.orders.map(o => `
+                            <div class="order-card" onclick="${o.is_legacy ? `showLegacyOrder('${o.number}', '${(client.code || '').trim()}')` : `showOrderDetail('${o.ref}')`}">
+                                <div class="order-card-header">
+                                    <span class="order-number">${o.number}</span>
+                                    <span class="order-date">${formatDate(o.date)}</span>
+                                </div>
+                                <div class="order-car">${o.car_name || ''}</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span class="badge ${o.is_legacy ? 'badge-gray' : 'badge-info'}">${o.status || (o.is_legacy ? 'История' : '-')}</span>
+                                    <span class="order-sum">${formatMoney(o.sum)}</span>
+                                </div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><div class="icon">📋</div>Нет заказов</div>'}
+                    </div>
+
+                    <div id="client-cars" class="tab-content">
+                        ${client.cars?.length ? `
+                            <table>
+                                <thead>
+                                    <tr><th>Автомобиль</th><th>Гос.номер</th><th>VIN</th><th>Год</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${client.cars.map(c => `
+                                        <tr>
+                                            <td>${c.model_name || '-'}</td>
+                                            <td>${c.plate || '-'}</td>
+                                            <td>${c.vin || '-'}</td>
+                                            <td>${c.year || '-'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        ` : '<div class="empty-state"><div class="icon">🚗</div>Нет автомобилей</div>'}
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Ошибка загрузки клиента</div>';
+            }
+        }
+
+        function switchTab(el, tabId) {
+            el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Orders
+        async function loadOrders() {
+            const container = document.getElementById('orders-list');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div>Загрузка...</div>';
+
+            try {
+                const res = await fetch(`${API}/api/orders?limit=50`);
+                const orders = await res.json();
+
+                if (orders.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div>Нет заказов</div>';
+                    return;
+                }
+
+                container.innerHTML = orders.map(o => `
+                    <div class="order-card" onclick="showOrderDetail('${o.ref}')">
+                        <div class="order-card-header">
+                            <span class="order-number">${o.number}</span>
+                            <span class="order-date">${formatDate(o.date)}</span>
+                        </div>
+                        <div class="order-car">${o.client_name || 'Клиент не указан'}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="badge badge-info">${o.status || 'Новый'}</span>
+                            <span class="order-sum">${formatMoney(o.sum)}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Ошибка загрузки заказов</div>';
+            }
+        }
+
+        async function showOrderDetail(ref) {
+            if (!ref) return;
+            navigateTo('order-detail');
+            const container = document.getElementById('order-detail-content');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div>Загрузка...</div>';
+
+            try {
+                const res = await fetch(`${API}/api/orders/${ref}`);
+                const order = await res.json();
+
+                renderOrderDetail(order);
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Ошибка загрузки заказа</div>';
+            }
+        }
+
+        async function showLegacyOrder(number, clientCode = '') {
+            navigateTo('order-detail');
+            const container = document.getElementById('order-detail-content');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div>Загрузка...</div>';
+
+            try {
+                let url = `${API}/api/orders/history/${number}`;
+                if (clientCode) {
+                    url += `?client_code=${encodeURIComponent(clientCode)}`;
+                }
+                const res = await fetch(url);
+                const order = await res.json();
+
+                renderOrderDetail(order);
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Ошибка загрузки заказа</div>';
+            }
+        }
+
+        function renderOrderDetail(order) {
+            const container = document.getElementById('order-detail-content');
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <span>Заказ ${order.number}</span>
+                        <span class="badge ${order.is_legacy ? 'badge-gray' : 'badge-success'}">${order.status || (order.is_legacy ? 'История' : '-')}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Дата</label>
+                                <div class="value">${formatDate(order.date)}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Сумма</label>
+                                <div class="value" style="color: var(--success); font-weight: 600;">${formatMoney(order.sum)}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Автомобиль</label>
+                                <div class="value">${order.car_name || order.car_plate || '-'}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Пробег</label>
+                                <div class="value">${order.mileage || '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${order.works?.length ? `
+                <div class="card">
+                    <div class="card-header">Работы (${order.works.length})</div>
+                    <div class="card-body">
+                        ${order.works.map(w => `
+                            <div class="item-row">
+                                <span class="item-name">${w.name}</span>
+                                <span class="item-qty">× ${w.quantity}</span>
+                                <span class="item-sum">${formatMoney(w.sum)}</span>
+                            </div>
+                        `).join('')}
+                        <div class="item-row" style="font-weight: 600; border-top: 2px solid var(--gray-200); padding-top: 12px;">
+                            <span>Итого работы:</span>
+                            <span></span>
+                            <span class="item-sum">${formatMoney(order.works_sum)}</span>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${order.goods?.length ? `
+                <div class="card">
+                    <div class="card-header">Запчасти (${order.goods.length})</div>
+                    <div class="card-body">
+                        ${order.goods.map(g => `
+                            <div class="item-row">
+                                <span class="item-name">${g.name}</span>
+                                <span class="item-qty">× ${g.quantity}</span>
+                                <span class="item-sum">${formatMoney(g.sum)}</span>
+                            </div>
+                        `).join('')}
+                        <div class="item-row" style="font-weight: 600; border-top: 2px solid var(--gray-200); padding-top: 12px;">
+                            <span>Итого запчасти:</span>
+                            <span></span>
+                            <span class="item-sum">${formatMoney(order.goods_sum)}</span>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        // Cars
+        async function loadCars(search = '') {
+            const tbody = document.getElementById('cars-table');
+            tbody.innerHTML = '<tr><td colspan="4" class="loading"><div class="spinner"></div>Загрузка...</td></tr>';
+
+            try {
+                const res = await fetch(`${API}/api/cars?limit=50`);
+                const cars = await res.json();
+
+                if (cars.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Автомобили не найдены</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = cars.map(c => `
+                    <tr>
+                        <td>${c.Description || '-'}</td>
+                        <td>${c.ГосНомер || '-'}</td>
+                        <td>${c.VIN || '-'}</td>
+                        <td>${c.ГодВыпуска ? c.ГодВыпуска.substring(0, 4) : '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Ошибка загрузки</td></tr>';
+            }
+        }
+
+        function searchCars(query) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (query.length >= 3) {
+                    searchCarByPlate(query);
+                } else {
+                    loadCars();
+                }
+            }, 300);
+        }
+
+        async function searchCarByPlate(plate) {
+            const tbody = document.getElementById('cars-table');
+            try {
+                const res = await fetch(`${API}/api/cars/search/plate/${encodeURIComponent(plate)}`);
+                const car = await res.json();
+
+                if (!car) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Автомобиль не найден</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = `
+                    <tr>
+                        <td>${car.Description || '-'}</td>
+                        <td>${car.ГосНомер || '-'}</td>
+                        <td>${car.VIN || '-'}</td>
+                        <td>${car.ГодВыпуска ? car.ГодВыпуска.substring(0, 4) : '-'}</td>
+                    </tr>
+                `;
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Ошибка поиска</td></tr>';
+            }
+        }
+
+        // Modal
+        function openNewOrderModal() {
+            document.getElementById('new-order-modal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('new-order-modal').classList.remove('show');
+            document.getElementById('modal-client-search').value = '';
+            document.getElementById('modal-client-ref').value = '';
+            document.getElementById('modal-car-select').innerHTML = '<option value="">Сначала выберите клиента</option>';
+            document.getElementById('modal-car-select').disabled = true;
+            document.getElementById('modal-comment').value = '';
+        }
+
+        async function searchClientsModal(query) {
+            const results = document.getElementById('modal-client-results');
+            if (query.length < 2) {
+                results.classList.remove('show');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/clients?search=${encodeURIComponent(query)}&limit=10`);
+                const clients = await res.json();
+
+                if (clients.length === 0) {
+                    results.innerHTML = '<div class="search-result-item">Ничего не найдено</div>';
+                } else {
+                    results.innerHTML = clients.map(c => `
+                        <div class="search-result-item" onclick="selectClientModal('${c.ref}', '${c.name.replace(/'/g, "\\'")}')">
+                            <div class="name">${c.name}</div>
+                            <div class="meta">${c.code || ''} ${c.phone || ''}</div>
+                        </div>
+                    `).join('');
+                }
+                results.classList.add('show');
+            } catch (e) {
+                results.classList.remove('show');
+            }
+        }
+
+        async function selectClientModal(ref, name) {
+            document.getElementById('modal-client-search').value = name;
+            document.getElementById('modal-client-ref').value = ref;
+            document.getElementById('modal-client-results').classList.remove('show');
+
+            // Load client's cars
+            const select = document.getElementById('modal-car-select');
+            select.innerHTML = '<option value="">Загрузка...</option>';
+
+            try {
+                const res = await fetch(`${API}/api/clients/${ref}`);
+                const client = await res.json();
+
+                if (client.cars?.length) {
+                    select.innerHTML = '<option value="">Выберите автомобиль</option>' +
+                        client.cars.map(c => `<option value="${c.ref}">${c.model_name || 'Авто'} ${c.plate || ''}</option>`).join('');
+                    select.disabled = false;
+                } else {
+                    select.innerHTML = '<option value="">У клиента нет автомобилей</option>';
+                }
+            } catch (e) {
+                select.innerHTML = '<option value="">Ошибка загрузки</option>';
+            }
+        }
+
+        async function createOrder() {
+            const clientRef = document.getElementById('modal-client-ref').value;
+            const carRef = document.getElementById('modal-car-select').value;
+            const comment = document.getElementById('modal-comment').value;
+
+            if (!clientRef) {
+                alert('Выберите клиента');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/orders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        client_ref: clientRef,
+                        car_ref: carRef || null,
+                        comment: comment
+                    })
+                });
+
+                if (res.ok) {
+                    const order = await res.json();
+                    alert(`Заказ ${order.number} создан!`);
+                    closeModal();
+                    loadOrders();
+                } else {
+                    const err = await res.json();
+                    alert('Ошибка: ' + (err.detail || 'Не удалось создать заказ'));
+                }
+            } catch (e) {
+                alert('Ошибка создания заказа');
+            }
+        }
+
+        // Helpers
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('ru-RU');
+        }
+
+        function formatMoney(amount) {
+            if (!amount) return '0 ₽';
+            return new Intl.NumberFormat('ru-RU').format(amount) + ' ₽';
+        }
+
+        // ==================== DVI Functions ====================
+
+        let currentDviId = null;
+        let dviPhotoIds = [];
+
+        // Load DVI list
+        async function loadDviList() {
+            const container = document.getElementById('dvi-list');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div>Загрузка...</div>';
+
+            try {
+                const res = await fetch(`${API}/api/dvi?limit=50`);
+                const inspections = await res.json();
+
+                if (inspections.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><div class="icon">📸</div>Нет осмотров<br><small>Создайте первый DVI осмотр</small></div>';
+                    return;
+                }
+
+                container.innerHTML = inspections.map(dvi => `
+                    <div class="dvi-card" onclick="showDviDetail('${dvi.id}')">
+                        <div class="dvi-card-header">
+                            <span class="dvi-card-id">${dvi.id}</span>
+                            <span class="dvi-card-date">${formatDate(dvi.created_at)}</span>
+                        </div>
+                        <div class="dvi-card-info">
+                            <div class="dvi-card-car">${dvi.car_plate || dvi.car_name || 'Без номера'}</div>
+                            <div class="dvi-card-client">${dvi.client_name || dvi.mechanic_name || ''}</div>
+                        </div>
+                        <div class="dvi-status-bar">
+                            <span class="dvi-status-item ok">✅ ${dvi.ok_count}</span>
+                            <span class="dvi-status-item attention">⚠️ ${dvi.attention_count}</span>
+                            <span class="dvi-status-item urgent">🔴 ${dvi.urgent_count}</span>
+                            ${dvi.sent_to_client ? '<span style="margin-left: auto; color: var(--success);">📤 Отправлен</span>' : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Ошибка загрузки осмотров</div>';
+                console.error(e);
+            }
+        }
+
+        // Show DVI detail
+        async function showDviDetail(id) {
+            currentDviId = id;
+            navigateTo('dvi-detail');
+            const container = document.getElementById('dvi-detail-content');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div>Загрузка...</div>';
+
+            try {
+                const res = await fetch(`${API}/api/dvi/${id}`);
+                const dvi = await res.json();
+
+                renderDviDetail(dvi);
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Ошибка загрузки осмотра</div>';
+            }
+        }
+
+        function renderDviDetail(dvi) {
+            const container = document.getElementById('dvi-detail-content');
+            const statusLabel = {ok: '✅ ОК', attention: '⚠️ Внимание', urgent: '🔴 Срочно'};
+
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <span>Осмотр ${dvi.id}</span>
+                        <div style="display: flex; gap: 8px;">
+                            ${(dvi.attention_count + dvi.urgent_count) > 0 ? `<button class="btn btn-primary btn-sm" onclick="openCreateOrderModal('${dvi.id}')">📋 Создать заказ</button>` : ''}
+                            ${!dvi.sent_to_client ? `<button class="btn btn-success btn-sm" onclick="sendDviToClient('${dvi.id}')">📤 Отправить клиенту</button>` : '<span class="badge badge-success">Отправлен клиенту</span>'}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Гос.номер</label>
+                                <div class="value">${dvi.car_plate || '-'}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>VIN</label>
+                                <div class="value">${dvi.car_vin || '-'}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Пробег</label>
+                                <div class="value">${dvi.mileage ? dvi.mileage.toLocaleString() + ' км' : '-'}</div>
+                            </div>
+                            <div class="info-item">
+                                <label>Механик</label>
+                                <div class="value">${dvi.mechanic_name || '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dvi-summary">
+                    <div class="dvi-summary-item">
+                        <div class="count">${dvi.total_items}</div>
+                        <div class="label">Всего пунктов</div>
+                    </div>
+                    <div class="dvi-summary-item ok">
+                        <div class="count">${dvi.ok_count}</div>
+                        <div class="label">В норме</div>
+                    </div>
+                    <div class="dvi-summary-item attention">
+                        <div class="count">${dvi.attention_count}</div>
+                        <div class="label">Внимание</div>
+                    </div>
+                    <div class="dvi-summary-item urgent">
+                        <div class="count">${dvi.urgent_count}</div>
+                        <div class="label">Срочно</div>
+                    </div>
+                </div>
+
+                ${dvi.total_estimated > 0 ? `
+                <div class="card" style="background: #fffbeb; border: 1px solid #fcd34d;">
+                    <div class="card-body" style="text-align: center;">
+                        <div style="font-size: 14px; color: #92400e;">Рекомендуемые работы</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #b45309;">${formatMoney(dvi.total_estimated)}</div>
+                        <div style="font-size: 13px; color: #92400e;">${dvi.approved_count} из ${dvi.attention_count + dvi.urgent_count} одобрено клиентом</div>
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="card">
+                    <div class="card-header">
+                        <span>Результаты осмотра (${dvi.items?.length || 0})</span>
+                        <button class="btn btn-primary btn-sm" onclick="openAddDviItemModal()">+ Добавить пункт</button>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        ${dvi.items?.length ? `
+                            <div class="dvi-items-list">
+                                ${dvi.items.map(item => `
+                                    <div class="dvi-item">
+                                        <div class="dvi-item-left">
+                                            <div class="dvi-item-status ${item.status}"></div>
+                                            <div>
+                                                <div class="dvi-item-name">${item.name}</div>
+                                                ${item.notes ? `<div class="dvi-item-notes">${item.notes}</div>` : ''}
+                                                ${item.recommended_work ? `<div class="dvi-item-notes" style="color: var(--primary);">→ ${item.recommended_work}</div>` : ''}
+                                            </div>
+                                        </div>
+                                        <div class="dvi-item-right">
+                                            ${item.photo_urls?.length ? `
+                                                <div class="dvi-item-photos">
+                                                    ${item.photo_urls.slice(0, 3).map(url => `
+                                                        <img src="${API}${url}" class="dvi-item-photo" onclick="viewPhoto('${API}${url}')">
+                                                    `).join('')}
+                                                    ${item.photo_urls.length > 3 ? `<span style="color: var(--gray-500);">+${item.photo_urls.length - 3}</span>` : ''}
+                                                </div>
+                                            ` : ''}
+                                            ${item.estimated_cost ? `<div class="dvi-item-cost">${formatMoney(item.estimated_cost)}</div>` : ''}
+                                            ${item.approved !== null ? `
+                                                <button class="dvi-item-approve ${item.approved ? 'approved' : 'pending'}">
+                                                    ${item.approved ? '✓ Одобрено' : '✗ Отклонено'}
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="empty-state" style="padding: 40px;"><div class="icon">📋</div>Нет пунктов осмотра<br><small>Добавьте первый пункт</small></div>'}
+                    </div>
+                </div>
+
+                ${dvi.public_url ? `
+                <div class="card">
+                    <div class="card-body">
+                        <label style="font-size: 13px; color: var(--gray-500);">Ссылка для клиента:</label>
+                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                            <input type="text" value="${window.location.origin}${dvi.public_url}" readonly style="flex: 1;">
+                            <button class="btn btn-secondary" onclick="copyToClipboard('${window.location.origin}${dvi.public_url}')">📋 Копировать</button>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        // Create new DVI
+        function openNewDviModal() {
+            document.getElementById('new-dvi-modal').classList.add('show');
+        }
+
+        function closeDviModal() {
+            document.getElementById('new-dvi-modal').classList.remove('show');
+            document.getElementById('dvi-car-plate').value = '';
+            document.getElementById('dvi-car-vin').value = '';
+            document.getElementById('dvi-mileage').value = '';
+            document.getElementById('dvi-client-phone').value = '';
+            document.getElementById('dvi-mechanic').value = '';
+        }
+
+        async function createDvi() {
+            const carPlate = document.getElementById('dvi-car-plate').value;
+            const carVin = document.getElementById('dvi-car-vin').value;
+            const mileage = document.getElementById('dvi-mileage').value;
+            const clientPhone = document.getElementById('dvi-client-phone').value;
+            const mechanicName = document.getElementById('dvi-mechanic').value;
+
+            if (!carPlate) {
+                alert('Введите гос.номер');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/dvi`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        car_plate: carPlate,
+                        car_vin: carVin || null,
+                        mileage: mileage ? parseInt(mileage) : null,
+                        client_phone: clientPhone || null,
+                        mechanic_name: mechanicName || null
+                    })
+                });
+
+                if (res.ok) {
+                    const dvi = await res.json();
+                    closeDviModal();
+                    showDviDetail(dvi.id);
+                } else {
+                    const err = await res.json();
+                    alert('Ошибка: ' + (err.detail || 'Не удалось создать осмотр'));
+                }
+            } catch (e) {
+                alert('Ошибка создания осмотра');
+                console.error(e);
+            }
+        }
+
+        // Add DVI Item
+        function openAddDviItemModal() {
+            dviPhotoIds = [];
+            document.getElementById('photo-preview').innerHTML = '';
+            document.getElementById('add-dvi-item-modal').classList.add('show');
+        }
+
+        function closeDviItemModal() {
+            document.getElementById('add-dvi-item-modal').classList.remove('show');
+            document.getElementById('dvi-item-category').value = 'engine';
+            document.getElementById('dvi-item-name').value = '';
+            document.getElementById('dvi-item-status').value = '';
+            document.getElementById('dvi-item-notes').value = '';
+            document.getElementById('dvi-item-work').value = '';
+            document.getElementById('dvi-item-cost').value = '';
+            document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+            dviPhotoIds = [];
+            document.getElementById('photo-preview').innerHTML = '';
+        }
+
+        function selectDviStatus(status, btn) {
+            document.getElementById('dvi-item-status').value = status;
+            document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active', status);
+        }
+
+        async function handlePhotoUpload(event) {
+            const files = event.target.files;
+            const preview = document.getElementById('photo-preview');
+
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const res = await fetch(`${API}/api/dvi/photos/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        dviPhotoIds.push(data.photo_id);
+
+                        const div = document.createElement('div');
+                        div.className = 'photo-preview-item';
+                        div.innerHTML = `
+                            <img src="${API}${data.url}">
+                            <button class="remove" onclick="removePhoto('${data.photo_id}', this)">&times;</button>
+                        `;
+                        preview.appendChild(div);
+                    }
+                } catch (e) {
+                    console.error('Photo upload error:', e);
+                }
+            }
+
+            event.target.value = '';
+        }
+
+        function removePhoto(photoId, btn) {
+            dviPhotoIds = dviPhotoIds.filter(id => id !== photoId);
+            btn.parentElement.remove();
+        }
+
+        async function addDviItem() {
+            const category = document.getElementById('dvi-item-category').value;
+            const name = document.getElementById('dvi-item-name').value;
+            const status = document.getElementById('dvi-item-status').value;
+            const notes = document.getElementById('dvi-item-notes').value;
+            const work = document.getElementById('dvi-item-work').value;
+            const cost = document.getElementById('dvi-item-cost').value;
+
+            if (!name) {
+                alert('Введите название пункта');
+                return;
+            }
+            if (!status) {
+                alert('Выберите статус');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/dvi/${currentDviId}/items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        category: category,
+                        name: name,
+                        status: status,
+                        notes: notes || null,
+                        photo_ids: dviPhotoIds,
+                        recommended_work: work || null,
+                        estimated_cost: cost ? parseFloat(cost) : null
+                    })
+                });
+
+                if (res.ok) {
+                    closeDviItemModal();
+                    showDviDetail(currentDviId);
+                } else {
+                    const err = await res.json();
+                    alert('Ошибка: ' + (err.detail || 'Не удалось добавить пункт'));
+                }
+            } catch (e) {
+                alert('Ошибка добавления пункта');
+                console.error(e);
+            }
+        }
+
+        // Send to client
+        async function sendDviToClient(id) {
+            try {
+                const res = await fetch(`${API}/api/dvi/${id}/send`, { method: 'POST' });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    alert('Осмотр отправлен клиенту!\\n\\nСсылка: ' + window.location.origin + data.public_url);
+                    showDviDetail(id);
+                } else {
+                    alert('Ошибка отправки');
+                }
+            } catch (e) {
+                alert('Ошибка отправки');
+            }
+        }
+
+        // Photo viewer
+        function viewPhoto(url) {
+            document.getElementById('photo-viewer-img').src = url;
+            document.getElementById('photo-viewer-modal').classList.add('show');
+        }
+
+        function closePhotoViewer() {
+            document.getElementById('photo-viewer-modal').classList.remove('show');
+        }
+
+        // Copy to clipboard
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Ссылка скопирована!');
+            });
+        }
+
+        // Back from DVI edit
+        function backFromDviEdit() {
+            if (currentDviId) {
+                showDviDetail(currentDviId);
+            } else {
+                navigateTo('dvi');
+            }
+        }
+
+        // ==================== Create Order from DVI ====================
+
+        let workMappings = [];
+        let selectedClientRef = null;
+
+        async function openCreateOrderModal(dviId) {
+            currentDviId = dviId;
+            workMappings = [];
+            selectedClientRef = null;
+
+            document.getElementById('order-client-search').value = '';
+            document.getElementById('order-client-ref').value = '';
+            document.getElementById('order-total-sum').textContent = '0 ₽';
+            document.getElementById('work-mappings-list').innerHTML = '<div class="loading"><div class="spinner"></div>Загрузка...</div>';
+
+            document.getElementById('create-order-modal').classList.add('show');
+
+            // Load suggested works
+            try {
+                const res = await fetch(`${API}/api/dvi/${dviId}/suggested-works`);
+                const data = await res.json();
+
+                renderWorkMappings(data.suggestions);
+            } catch (e) {
+                document.getElementById('work-mappings-list').innerHTML = '<div class="empty-state">Ошибка загрузки</div>';
+            }
+        }
+
+        function closeCreateOrderModal() {
+            document.getElementById('create-order-modal').classList.remove('show');
+        }
+
+        function renderWorkMappings(suggestions) {
+            const container = document.getElementById('work-mappings-list');
+
+            if (!suggestions || suggestions.length === 0) {
+                container.innerHTML = '<div class="empty-state">Нет пунктов для создания заказа</div>';
+                return;
+            }
+
+            workMappings = suggestions.map(s => ({
+                dvi_item_id: s.dvi_item_id,
+                work_ref: s.suggested_works?.[0]?.ref || '',
+                price: s.estimated_cost || s.suggested_works?.[0]?.price || 0,
+                quantity: 1
+            }));
+
+            container.innerHTML = suggestions.map((s, index) => `
+                <div class="work-mapping-item" data-index="${index}">
+                    <div class="work-mapping-header">
+                        <div class="work-mapping-dvi">
+                            <div class="name">${s.dvi_item_name}</div>
+                            <div class="status ${s.dvi_item_status}">
+                                ${s.dvi_item_status === 'urgent' ? '🔴 Срочно' : '⚠️ Внимание'}
+                                ${s.recommended_work ? ` — ${s.recommended_work}` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="work-mapping-select">
+                        <select onchange="updateWorkMapping(${index}, 'work_ref', this.value)">
+                            <option value="">-- Выберите работу из 1С --</option>
+                            ${s.suggested_works?.map(w => `
+                                <option value="${w.ref}" ${w.ref === workMappings[index].work_ref ? 'selected' : ''}>
+                                    ${w.name} ${w.price ? `(${formatMoney(w.price)})` : ''}
+                                </option>
+                            `).join('') || ''}
+                            <option value="search">🔍 Поиск другой работы...</option>
+                        </select>
+                    </div>
+                    <div class="work-mapping-price">
+                        <input type="number" placeholder="Цена" value="${s.estimated_cost || s.suggested_works?.[0]?.price || ''}"
+                               onchange="updateWorkMapping(${index}, 'price', parseFloat(this.value) || 0)">
+                        <input type="number" placeholder="Кол-во" value="1" style="max-width: 80px;"
+                               onchange="updateWorkMapping(${index}, 'quantity', parseFloat(this.value) || 1)">
+                    </div>
+                </div>
+            `).join('');
+
+            updateTotalSum();
+        }
+
+        function updateWorkMapping(index, field, value) {
+            if (value === 'search') {
+                // TODO: implement work search
+                alert('Поиск работы: введите название в поиск справочника работ');
+                return;
+            }
+            workMappings[index][field] = value;
+            updateTotalSum();
+        }
+
+        function updateTotalSum() {
+            const total = workMappings.reduce((sum, m) => sum + (m.price * m.quantity), 0);
+            document.getElementById('order-total-sum').textContent = formatMoney(total);
+        }
+
+        async function searchClientsForOrder(query) {
+            const results = document.getElementById('order-client-results');
+            if (query.length < 2) {
+                results.classList.remove('show');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/clients?search=${encodeURIComponent(query)}&limit=10`);
+                const clients = await res.json();
+
+                if (clients.length === 0) {
+                    results.innerHTML = '<div class="search-result-item">Ничего не найдено</div>';
+                } else {
+                    results.innerHTML = clients.map(c => `
+                        <div class="search-result-item" onclick="selectClientForOrder('${c.ref}', '${c.name.replace(/'/g, "\\'")}')">
+                            <div class="name">${c.name}</div>
+                            <div class="meta">${c.code || ''} ${c.phone || ''}</div>
+                        </div>
+                    `).join('');
+                }
+                results.classList.add('show');
+            } catch (e) {
+                results.classList.remove('show');
+            }
+        }
+
+        function selectClientForOrder(ref, name) {
+            document.getElementById('order-client-search').value = name;
+            document.getElementById('order-client-ref').value = ref;
+            document.getElementById('order-client-results').classList.remove('show');
+            selectedClientRef = ref;
+        }
+
+        async function createOrderFromDvi() {
+            const clientRef = document.getElementById('order-client-ref').value;
+
+            if (!clientRef) {
+                alert('Выберите клиента');
+                return;
+            }
+
+            // Filter out mappings without work_ref
+            const validMappings = workMappings.filter(m => m.work_ref);
+
+            if (validMappings.length === 0) {
+                alert('Выберите хотя бы одну работу');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/api/dvi/${currentDviId}/create-order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        client_ref: clientRef,
+                        works: validMappings
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(`Заказ ${data.order_number} создан в 1С!\\n\\nРабот: ${data.works_count}\\nСумма: ${formatMoney(data.total_sum)}`);
+                    closeCreateOrderModal();
+                    showDviDetail(currentDviId);
+                } else {
+                    const err = await res.json();
+                    alert('Ошибка: ' + (err.detail || 'Не удалось создать заказ'));
+                }
+            } catch (e) {
+                alert('Ошибка создания заказа');
+                console.error(e);
+            }
+        }
+
+        // Init
+        loadDashboard();
+    </script>
+</body>
+</html>
