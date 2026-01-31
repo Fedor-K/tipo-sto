@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIPO-STO - База знаний</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; }
+
+        .header { background: #1a73e8; color: white; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+        .header h1 { font-size: 20px; font-weight: 500; }
+        .header a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; }
+
+        .container { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+
+        .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 16px; }
+        .card h2 { font-size: 16px; margin-bottom: 12px; color: #1a73e8; }
+
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .stat { text-align: center; padding: 12px; background: #f8f9fa; border-radius: 6px; }
+        .stat .value { font-size: 28px; font-weight: 700; color: #1a73e8; }
+        .stat .label { font-size: 12px; color: #666; margin-top: 4px; }
+
+        .upload-area { border: 2px dashed #ccc; border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+        .upload-area:hover, .upload-area.dragover { border-color: #1a73e8; background: #e8f0fe; }
+        .upload-area input { display: none; }
+        .upload-area p { color: #666; margin-top: 8px; font-size: 14px; }
+
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #1a73e8; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { font-weight: 600; color: #555; }
+
+        .search-box { display: flex; gap: 8px; margin-bottom: 12px; }
+        .search-box input { flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+
+        .results { margin-top: 12px; }
+        .result-item { padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #1a73e8; }
+        .result-item .meta { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .result-item .text { font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top-color: #1a73e8; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toast { position: fixed; bottom: 24px; right: 24px; background: #333; color: white; padding: 12px 20px; border-radius: 6px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 100; }
+        .toast.show { opacity: 1; }
+        .toast.error { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>База знаний</h1>
+        <a href="/">&#8592; Главная</a>
+    </div>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats" id="stats">
+            <div class="stat"><div class="value" id="stat-docs">-</div><div class="label">Документов</div></div>
+            <div class="stat"><div class="value" id="stat-chunks">-</div><div class="label">Чанков</div></div>
+        </div>
+
+        <!-- Upload -->
+        <div class="card">
+            <h2>Загрузка документа</h2>
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md">
+                <div><strong>Перетащите файл сюда</strong> или нажмите для выбора</div>
+                <p>PDF, DOCX, TXT, MD (до 20 МБ)</p>
+            </div>
+            <div id="uploadStatus" style="margin-top:12px; font-size:14px; color:#666;"></div>
+        </div>
+
+        <!-- Documents -->
+        <div class="card">
+            <h2>Документы</h2>
+            <table>
+                <thead><tr><th>Файл</th><th>Чанков</th><th>Дата</th><th></th></tr></thead>
+                <tbody id="docList"><tr><td colspan="4" style="color:#999">Загрузка...</td></tr></tbody>
+            </table>
+        </div>
+
+        <!-- Search -->
+        <div class="card">
+            <h2>Тестовый поиск</h2>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Введите запрос для поиска по базе знаний...">
+                <button class="btn btn-primary" onclick="doSearch()">Поиск</button>
+            </div>
+            <div class="results" id="searchResults"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    const API = '/api/knowledge-base';
+
+    // ---- Toast ----
+    function toast(msg, isError) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast show' + (isError ? ' error' : '');
+        setTimeout(() => t.className = 'toast', 3000);
+    }
+
+    // ---- Stats & Documents ----
+    async function loadStats() {
+        try {
+            const r = await fetch(API + '/stats');
+            const d = await r.json();
+            document.getElementById('stat-docs').textContent = d.total_documents;
+            document.getElementById('stat-chunks').textContent = d.total_chunks;
+            renderDocs(d.documents || []);
+        } catch(e) { console.error(e); }
+    }
+
+    function renderDocs(docs) {
+        const tbody = document.getElementById('docList');
+        if (!docs.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="color:#999">Нет документов</td></tr>';
+            return;
+        }
+        tbody.innerHTML = docs.map(d => `<tr>
+            <td>${esc(d.filename)}</td>
+            <td>${d.total_chunks}</td>
+            <td>${d.added_at ? new Date(d.added_at * 1000).toLocaleDateString('ru') : '-'}</td>
+            <td><button class="btn btn-danger" onclick="deleteDoc('${d.document_id}')">Удалить</button></td>
+        </tr>`).join('');
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // ---- Upload ----
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classList.remove('dragover'); if(e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', () => { if(fileInput.files.length) uploadFile(fileInput.files[0]); });
+
+    async function uploadFile(file) {
+        const status = document.getElementById('uploadStatus');
+        const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+        status.innerHTML = '<span class="spinner"></span> Загрузка ' + esc(file.name) + ' (' + sizeMB + ' MB)... Это может занять несколько минут.';
+
+        const fd = new FormData();
+        fd.append('file', file);
+
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 600000); // 10 min timeout
+            const r = await fetch(API + '/documents', { method: 'POST', body: fd, signal: controller.signal });
+            clearTimeout(timeout);
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || 'Upload failed');
+            status.innerHTML = `Готово: ${d.chunk_count} чанков, ${d.token_count} токенов`;
+            toast('Документ загружен');
+            loadStats();
+        } catch(e) {
+            if (e.name === 'AbortError') {
+                status.innerHTML = 'Ошибка: таймаут загрузки (файл слишком большой?)';
+            } else {
+                status.innerHTML = 'Ошибка: ' + e.message;
+            }
+            toast(e.message, true);
+        }
+        fileInput.value = '';
+    }
+
+    // ---- Delete ----
+    async function deleteDoc(id) {
+        if (!confirm('Удалить документ?')) return;
+        try {
+            const r = await fetch(API + '/documents/' + id, { method: 'DELETE' });
+            if (!r.ok) throw new Error('Delete failed');
+            toast('Документ удалён');
+            loadStats();
+        } catch(e) { toast(e.message, true); }
+    }
+
+    // ---- Search ----
+    async function doSearch() {
+        const q = document.getElementById('searchInput').value.trim();
+        if (!q) return;
+        const box = document.getElementById('searchResults');
+        box.innerHTML = '<span class="spinner"></span> Поиск...';
+
+        try {
+            const r = await fetch(API + '/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: q })
+            });
+            const d = await r.json();
+            if (!d.results || !d.results.length) {
+                box.innerHTML = '<p style="color:#999">Ничего не найдено</p>';
+                return;
+            }
+            box.innerHTML = d.results.map(r => `<div class="result-item">
+                <div class="meta">${esc(r.filename)} &middot; чанк #${r.chunk_index} &middot; релевантность: ${(r.score * 100).toFixed(1)}%</div>
+                <div class="text">${esc(r.text.substring(0, 500))}${r.text.length > 500 ? '...' : ''}</div>
+            </div>`).join('');
+        } catch(e) { box.innerHTML = 'Ошибка: ' + e.message; }
+    }
+
+    document.getElementById('searchInput').addEventListener('keydown', e => { if(e.key === 'Enter') doSearch(); });
+
+    // Init
+    loadStats();
+    </script>
+</body>
+</html>

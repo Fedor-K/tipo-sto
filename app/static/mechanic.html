@@ -11,14 +11,18 @@
             --primary: #2563eb;
             --purple: #8b5cf6;
             --purple-dark: #6d28d9;
+            --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
             --gray-500: #6b7280;
             --gray-700: #374151;
+            --gray-800: #1f2937;
             --gray-900: #111827;
             --danger: #ef4444;
             --safe-bottom: env(safe-area-inset-bottom, 0px);
             --safe-top: env(safe-area-inset-top, 0px);
+            --sidebar-width: 280px;
         }
 
         html, body {
@@ -31,15 +35,118 @@
             background: var(--gray-100);
         }
 
-        .chat-container {
+        .app-container {
             display: flex;
-            flex-direction: column;
             height: 100vh;
             height: -webkit-fill-available;
-            max-width: 600px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--gray-900);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: transform 0.3s;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--gray-700);
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background: transparent;
+            border: 1px solid var(--gray-700);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+        .new-chat-btn:hover {
+            background: var(--gray-800);
+        }
+
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .chat-list-item {
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+        .chat-list-item:hover {
+            background: var(--gray-800);
+        }
+        .chat-list-item.active {
+            background: var(--gray-700);
+        }
+        .chat-list-item-title {
+            flex: 1;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chat-list-item-delete {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+            padding: 4px;
+            font-size: 16px;
+            transition: opacity 0.2s, color 0.2s;
+        }
+        .chat-list-item:hover .chat-list-item-delete {
+            opacity: 1;
+        }
+        .chat-list-item-delete:hover {
+            color: var(--danger);
+        }
+
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 100;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            background: var(--gray-900);
+            color: white;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Main Chat Area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
             margin: 0 auto;
             background: white;
-            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            width: 100%;
         }
 
         .chat-header {
@@ -92,11 +199,65 @@
             align-self: flex-start;
             border-bottom-left-radius: 6px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            white-space: normal;
+        }
+        .chat-message.assistant h1,
+        .chat-message.assistant h2,
+        .chat-message.assistant h3 {
+            margin: 16px 0 8px 0;
+            line-height: 1.3;
+        }
+        .chat-message.assistant h3 { font-size: 17px; }
+        .chat-message.assistant h2 { font-size: 18px; }
+        .chat-message.assistant p {
+            margin: 6px 0;
+        }
+        .chat-message.assistant ul,
+        .chat-message.assistant ol {
+            margin: 6px 0;
+            padding-left: 24px;
+        }
+        .chat-message.assistant li {
+            margin: 4px 0;
+        }
+        .chat-message.assistant blockquote {
+            border-left: 4px solid var(--purple);
+            background: #f3f0ff;
+            padding: 10px 14px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+            color: var(--gray-700);
+        }
+        .chat-message.assistant blockquote p {
+            margin: 0;
+        }
+        .chat-message.assistant code {
+            background: var(--gray-100);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .chat-message.assistant strong {
+            color: var(--gray-900);
+        }
+        .chat-message.assistant hr {
+            border: none;
+            border-top: 1px solid var(--gray-200);
+            margin: 12px 0;
         }
         .chat-message.typing {
             background: white;
             color: var(--gray-500);
             font-style: italic;
+        }
+        .typing-cursor {
+            animation: blink 1s infinite;
+            color: var(--purple);
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
         }
         .chat-message.error {
             background: #fef2f2;
@@ -109,6 +270,16 @@
             display: block;
         }
 
+        .chat-welcome {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray-500);
+        }
+        .chat-welcome h2 {
+            color: var(--gray-700);
+            margin-bottom: 16px;
+        }
+
         .chat-suggestions {
             display: flex;
             flex-wrap: wrap;
@@ -117,6 +288,7 @@
             background: white;
             border-top: 1px solid var(--gray-200);
             flex-shrink: 0;
+            justify-content: center;
         }
         .chat-suggestion {
             padding: 10px 16px;
@@ -128,9 +300,6 @@
             transition: background 0.2s;
         }
         .chat-suggestion:hover {
-            background: var(--gray-200);
-        }
-        .chat-suggestion:active {
             background: var(--gray-200);
         }
 
@@ -166,7 +335,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .chat-input-area {
@@ -195,9 +363,6 @@
             outline: none;
             border-color: var(--purple);
         }
-        .chat-input::placeholder {
-            color: var(--gray-500);
-        }
 
         .chat-btn {
             width: 52px;
@@ -221,9 +386,7 @@
             border: 2px solid var(--gray-200);
             color: var(--gray-700);
         }
-        .chat-photo-btn input {
-            display: none;
-        }
+        .chat-photo-btn input { display: none; }
         .chat-photo-btn.has-image {
             background: var(--purple);
             border-color: var(--purple);
@@ -240,81 +403,225 @@
             cursor: not-allowed;
         }
 
-        /* Tablet */
-        @media (min-width: 768px) {
-            .chat-header {
-                padding: 28px;
+        /* Mobile */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 50;
+                transform: translateX(-100%);
             }
-            .chat-header-title {
-                font-size: 26px;
+            .sidebar.open {
+                transform: translateX(0);
             }
-            .chat-message {
-                max-width: 70%;
-                font-size: 17px;
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 40;
             }
-            .chat-suggestions {
+            .sidebar.open + .sidebar-overlay {
+                display: block;
+            }
+            .sidebar-toggle {
+                display: flex;
+                align-items: center;
                 justify-content: center;
             }
-            .chat-suggestion {
-                font-size: 15px;
-                padding: 12px 20px;
+            .chat-header {
+                padding-left: 70px;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 769px) {
+            .chat-message {
+                max-width: 70%;
             }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            <div class="chat-header-title">🤖 AI Помощник</div>
-            <div class="chat-header-subtitle">Советы по ремонту автомобилей</div>
-        </div>
+    <div class="app-container">
+        <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
 
-        <div class="chat-messages" id="chat-messages">
-            <div class="chat-message assistant">Привет! Я AI-помощник для механиков. Могу подсказать:
-
-🔧 Расшифровка OBD-II кодов ошибок
-⚙️ Моменты затяжки
-🔍 Диагностика по симптомам
-📷 Анализ фото деталей
-
-🚗 Укажите марку и модель авто для точных рекомендаций!
-
-Пример: "Kia Rio 2018, код P0171" или "момент затяжки колёс BMW X5"</div>
-        </div>
-
-        <div class="chat-suggestions" id="chat-suggestions">
-            <div class="chat-suggestion" onclick="askOBD()">🔧 Код ошибки OBD</div>
-            <div class="chat-suggestion" onclick="askSuggestion('Момент затяжки колёсных болтов')">⚙️ Момент затяжки</div>
-            <div class="chat-suggestion" onclick="askSuggestion('Что это за деталь?')">📷 Фото детали</div>
-        </div>
-
-        <div id="chat-image-preview" class="chat-image-preview">
-            <div class="chat-image-preview-container">
-                <img id="chat-preview-img" src="">
-                <button class="chat-image-remove" onclick="removeChatImage()">×</button>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="createNewChat()">
+                    <span>+</span>
+                    <span>Новый чат</span>
+                </button>
             </div>
-        </div>
+            <div class="chat-list" id="chat-list">
+                <!-- Chats loaded dynamically -->
+            </div>
+        </aside>
+        <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-        <div class="chat-input-area">
-            <button class="chat-btn chat-photo-btn" id="chat-photo-btn" onclick="document.getElementById('chat-image-input').click()">
-                📷
-                <input type="file" id="chat-image-input" accept="image/*" capture="environment" onchange="handleChatImage(event)">
-            </button>
-            <textarea id="chat-input" class="chat-input" placeholder="Задайте вопрос..." rows="1" oninput="autoResize(this)"></textarea>
-            <button class="chat-btn chat-send" id="chat-send" onclick="sendChatMessage()">➤</button>
-        </div>
+        <main class="chat-container">
+            <div class="chat-header">
+                <div class="chat-header-title">🤖 AI Помощник</div>
+                <div class="chat-header-subtitle">Советы по ремонту автомобилей</div>
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-welcome">
+                    <h2>👋 Добро пожаловать!</h2>
+                    <p>Я AI-помощник для механиков.<br>Задайте вопрос или выберите тему ниже.</p>
+                </div>
+            </div>
+
+            <div class="chat-suggestions" id="chat-suggestions">
+                <div class="chat-suggestion" onclick="askOBD()">🔧 Код ошибки OBD</div>
+                <div class="chat-suggestion" onclick="askSuggestion('Момент затяжки колёсных болтов')">⚙️ Момент затяжки</div>
+                <div class="chat-suggestion" onclick="askSuggestion('Что это за деталь?')">📷 Фото детали</div>
+            </div>
+
+            <div id="chat-image-preview" class="chat-image-preview">
+                <div class="chat-image-preview-container">
+                    <img id="chat-preview-img" src="">
+                    <button class="chat-image-remove" onclick="removeChatImage()">×</button>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <button class="chat-btn chat-photo-btn" id="chat-photo-btn" onclick="document.getElementById('chat-image-input').click()">
+                    📷
+                    <input type="file" id="chat-image-input" accept="image/*" capture="environment" onchange="handleChatImage(event)">
+                </button>
+                <textarea id="chat-input" class="chat-input" placeholder="Задайте вопрос..." rows="1" oninput="autoResize(this)"></textarea>
+                <button class="chat-btn chat-send" id="chat-send" onclick="sendChatMessage()">➤</button>
+            </div>
+        </main>
     </div>
 
     <script>
         const API = '';
-        let chatSessionId = 'mechanic-' + Date.now();
+        let currentChatId = null;
         let chatImageBase64 = null;
 
+        // Load chat list on start
+        document.addEventListener('DOMContentLoaded', () => {
+            loadChatList();
+            document.getElementById('chat-input').focus();
+        });
+
+        // Sidebar toggle (mobile)
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        // Auto-resize textarea
         function autoResize(textarea) {
             textarea.style.height = 'auto';
             textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
         }
 
+        // Load chat list
+        async function loadChatList() {
+            try {
+                const res = await fetch(`${API}/api/assistant/chats`);
+                const chats = await res.json();
+                renderChatList(chats);
+            } catch (e) {
+                console.error('Error loading chats:', e);
+            }
+        }
+
+        // Render chat list
+        function renderChatList(chats) {
+            const list = document.getElementById('chat-list');
+            list.innerHTML = chats.map(chat => `
+                <div class="chat-list-item ${chat.id === currentChatId ? 'active' : ''}"
+                     onclick="loadChat('${chat.id}')">
+                    <span class="chat-list-item-title">💬 ${escapeHtml(chat.title)}</span>
+                    <button class="chat-list-item-delete" onclick="deleteChat('${chat.id}', event)">🗑</button>
+                </div>
+            `).join('');
+        }
+
+        // Create new chat
+        async function createNewChat() {
+            currentChatId = null;
+            document.getElementById('chat-messages').innerHTML = `
+                <div class="chat-welcome">
+                    <h2>👋 Новый чат</h2>
+                    <p>Задайте вопрос или выберите тему ниже.</p>
+                </div>
+            `;
+            document.getElementById('chat-suggestions').style.display = 'flex';
+            document.querySelectorAll('.chat-list-item').forEach(el => el.classList.remove('active'));
+            toggleSidebar(); // Close sidebar on mobile
+            document.getElementById('chat-input').focus();
+        }
+
+        // Load existing chat
+        async function loadChat(chatId) {
+            try {
+                const res = await fetch(`${API}/api/assistant/chats/${chatId}`);
+                if (!res.ok) throw new Error('Chat not found');
+                const chat = await res.json();
+
+                currentChatId = chatId;
+                renderChatMessages(chat.messages);
+                document.getElementById('chat-suggestions').style.display =
+                    chat.messages.length === 0 ? 'flex' : 'none';
+
+                // Update active state
+                document.querySelectorAll('.chat-list-item').forEach(el => {
+                    el.classList.toggle('active', el.onclick.toString().includes(chatId));
+                });
+
+                toggleSidebar(); // Close sidebar on mobile
+            } catch (e) {
+                console.error('Error loading chat:', e);
+            }
+        }
+
+        // Render chat messages
+        function renderChatMessages(messages) {
+            const container = document.getElementById('chat-messages');
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="chat-welcome">
+                        <h2>👋 Пустой чат</h2>
+                        <p>Задайте вопрос или выберите тему ниже.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = messages.map(msg => `
+                <div class="chat-message ${msg.role}">
+                    ${msg.has_image ? '<span style="opacity:0.7">[📷 Фото]</span><br>' : ''}
+                    ${msg.role === 'assistant' ? renderMarkdown(msg.content) : escapeHtml(msg.content)}
+                </div>
+            `).join('');
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Delete chat
+        async function deleteChat(chatId, event) {
+            event.stopPropagation();
+            if (!confirm('Удалить этот чат?')) return;
+
+            try {
+                await fetch(`${API}/api/assistant/chats/${chatId}`, { method: 'DELETE' });
+                if (currentChatId === chatId) {
+                    createNewChat();
+                }
+                loadChatList();
+            } catch (e) {
+                console.error('Error deleting chat:', e);
+            }
+        }
+
+        // Handle image
         function handleChatImage(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -337,6 +644,7 @@
             document.getElementById('chat-preview-img').src = '';
         }
 
+        // Send message with streaming
         async function sendChatMessage() {
             const input = document.getElementById('chat-input');
             const message = input.value.trim() || (chatImageBase64 ? 'Что на этом фото? Дай диагностику.' : '');
@@ -345,14 +653,16 @@
             const messagesContainer = document.getElementById('chat-messages');
             const suggestions = document.getElementById('chat-suggestions');
 
-            // Hide suggestions after first message
+            // Hide welcome/suggestions
+            const welcome = messagesContainer.querySelector('.chat-welcome');
+            if (welcome) welcome.remove();
             suggestions.style.display = 'none';
 
             // Add user message
             const userDiv = document.createElement('div');
             userDiv.className = 'chat-message user';
             if (chatImageBase64) {
-                userDiv.innerHTML = `<img src="data:image/jpeg;base64,${chatImageBase64}">${message}`;
+                userDiv.innerHTML = `<img src="data:image/jpeg;base64,${chatImageBase64}">${escapeHtml(message)}`;
             } else {
                 userDiv.textContent = message;
             }
@@ -364,49 +674,77 @@
             const imageToSend = chatImageBase64;
             removeChatImage();
 
-            // Typing indicator
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'chat-message assistant typing';
-            typingDiv.textContent = imageToSend ? 'Анализирую фото...' : 'Думаю...';
-            messagesContainer.appendChild(typingDiv);
+            // Create response div (will be filled with streaming text)
+            const assistantDiv = document.createElement('div');
+            assistantDiv.className = 'chat-message assistant';
+            assistantDiv.innerHTML = '<span class="typing-cursor">▌</span>';
+            messagesContainer.appendChild(assistantDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
             try {
-                const res = await fetch(`${API}/api/assistant/chat`, {
+                const res = await fetch(`${API}/api/assistant/chat/stream`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message: message,
-                        session_id: chatSessionId,
+                        chat_id: currentChatId,
                         image_base64: imageToSend
                     })
                 });
 
-                typingDiv.remove();
-
-                if (res.ok) {
-                    const data = await res.json();
-                    const assistantDiv = document.createElement('div');
-                    assistantDiv.className = 'chat-message assistant';
-                    assistantDiv.textContent = data.response;
-                    messagesContainer.appendChild(assistantDiv);
-                } else {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'chat-message error';
-                    errorDiv.textContent = 'Ошибка получения ответа';
-                    messagesContainer.appendChild(errorDiv);
+                if (!res.ok) {
+                    assistantDiv.className = 'chat-message error';
+                    assistantDiv.textContent = 'Ошибка получения ответа';
+                    return;
                 }
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+
+                                if (data.chat_id && !currentChatId) {
+                                    currentChatId = data.chat_id;
+                                    loadChatList();
+                                }
+
+                                if (data.text) {
+                                    fullText += data.text;
+                                    assistantDiv.innerHTML = renderMarkdown(fullText) + '<span class="typing-cursor">▌</span>';
+                                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                }
+
+                                if (data.done) {
+                                    assistantDiv.innerHTML = renderMarkdown(fullText);
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                // Remove cursor when done
+                assistantDiv.innerHTML = renderMarkdown(fullText);
+
             } catch (e) {
-                typingDiv.remove();
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'chat-message error';
-                errorDiv.textContent = 'Ошибка сети: ' + e.message;
-                messagesContainer.appendChild(errorDiv);
+                assistantDiv.className = 'chat-message error';
+                assistantDiv.textContent = 'Ошибка сети: ' + e.message;
             }
 
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
+        // Quick suggestions
         function askSuggestion(text) {
             if (text.includes('📷') || text.includes('деталь')) {
                 document.getElementById('chat-input').value = text;
@@ -426,6 +764,22 @@
             }
         }
 
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Render markdown for assistant messages
+        function renderMarkdown(text) {
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({ breaks: true, gfm: true });
+                return marked.parse(text);
+            }
+            return escapeHtml(text);
+        }
+
         // Handle Enter key
         document.getElementById('chat-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -433,9 +787,6 @@
                 sendChatMessage();
             }
         });
-
-        // Focus input on load
-        document.getElementById('chat-input').focus();
     </script>
 </body>
 </html>

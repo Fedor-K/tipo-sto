@@ -28,11 +28,33 @@ class Settings(BaseSettings):
     # Cache settings
     CACHE_TTL: int = 300  # 5 minutes
 
-    # AI Assistant (OpenAI GPT-4 Vision)
+    # AI Assistant
     OPENAI_API_KEY: str = ""
+
+    # Z.ai (Zhipu AI) - alternative LLM provider
+    ZAI_API_KEY: str = ""
+    ZAI_API_URL: str = "https://api.z.ai/api/paas/v4/chat/completions"
+    ZAI_MODEL: str = "glm-4.5-air"
+    # DeepSeek - best price/quality for Russian
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_API_URL: str = "https://api.deepseek.com/chat/completions"
+    DEEPSEEK_MODEL: str = "deepseek-chat"
+    # LLM provider: "openai", "zai", or "deepseek"
+    LLM_PROVIDER: str = "openai"
 
     # Auto.dev VIN Decoder API (1000 free/month)
     AUTODEV_API_KEY: str = ""
+
+    # PartsAPI.ru - Russian auto parts catalog (~1200 RUB/month, demo keys free)
+    PARTSAPI_KEY: str = ""
+
+    # RAG / Knowledge Base
+    RAG_COLLECTION_NAME: str = "knowledge_base"
+    RAG_CHUNK_SIZE: int = 800
+    RAG_CHUNK_OVERLAP: int = 100
+    RAG_TOP_K: int = 5
+    RAG_MIN_RELEVANCE: float = 0.3
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
 
     # Server
     HOST: str = "0.0.0.0"

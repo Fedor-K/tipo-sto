@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from app.config import get_settings
-from app.api import clients_router, orders_router, inspections_router, assistant_router
+from app.api import clients_router, orders_router, inspections_router, assistant_router, kb_router
 from app.services import get_odata_service, get_legacy_service
 
 # Configure logging
@@ -65,6 +65,7 @@ app.include_router(clients_router, prefix="/api")
 app.include_router(orders_router, prefix="/api")
 app.include_router(inspections_router, prefix="/api")
 app.include_router(assistant_router, prefix="/api")
+app.include_router(kb_router, prefix="/api")
 
 
 # ==================== Reference Data Endpoints ====================
@@ -158,6 +159,15 @@ async def root():
     if old_ui.exists():
         return FileResponse(old_ui)
     return {"message": "TIPO-STO CRM API", "docs": "/docs"}
+
+
+@app.get("/admin/knowledge-base", tags=["ui"])
+async def knowledge_base_admin():
+    """Serve knowledge base admin page"""
+    kb_ui = Path(__file__).parent / "static" / "admin_kb.html"
+    if kb_ui.exists():
+        return FileResponse(kb_ui)
+    return {"error": "Knowledge base admin UI not found"}
 
 
 @app.get("/mechanic", tags=["ui"])

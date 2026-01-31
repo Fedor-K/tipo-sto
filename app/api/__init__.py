@@ -3,5 +3,6 @@ from .clients import router as clients_router
 from .orders import router as orders_router
 from .inspections import router as inspections_router
 from .assistant import router as assistant_router
+from .knowledge_base import router as kb_router
 
-__all__ = ["clients_router", "orders_router", "inspections_router", "assistant_router"]
+__all__ = ["clients_router", "orders_router", "inspections_router", "assistant_router", "kb_router"]
