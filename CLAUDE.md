@@ -114,11 +114,15 @@
   ```
   Если ошибка "Класс не зарегистрирован" — перезапустить с 32-bit Python.
 
-#### 147.45.98.69 - TIPO-STO (FastAPI приложение)
-- SSH: Administrator / kFop??zSpU4QK-
-- Python 3.12 установлен
+#### 198.12.73.168 - TIPO-STO (FastAPI приложение)
+- SSH: root / S5M50Xb9Os2a8GvgUs (порт 22)
+- Ubuntu 24.04 LTS, Python 3.12, 2.5GB RAM
+- RackNerd KVM VPS
 - TIPO-STO работает на порту 8000
-- UI: http://147.45.98.69:8000/ui
+- AI proxy на порту 8080
+- UI: http://198.12.73.168:8000/ui
+- Mechanic: http://198.12.73.168:8000/mechanic
+- Путь: /root/tipoSTO/ (venv в /root/tipoSTO/venv/)
 
 ### Rent1C (облачная 1С) - ОСНОВНОЙ ИСТОЧНИК ДАННЫХ
 > **Решение (январь 2026):** Используем Rent1C как основную базу данных.
@@ -822,10 +826,13 @@ TIPO-STO
 
 ---
 
-### Команда для деплоя на 147.45.98.69:
+### Команда для деплоя на 198.12.73.168:
 ```bash
-sshpass -p 'kFop??zSpU4QK-' scp -o StrictHostKeyChecking=no src/main.py Administrator@147.45.98.69:"C:\\tipoSTO\\main.py"
-sshpass -p 'kFop??zSpU4QK-' ssh -o StrictHostKeyChecking=no Administrator@147.45.98.69 "taskkill /F /IM python.exe"
+# Загрузить файлы
+sshpass -p 'S5M50Xb9Os2a8GvgUs' scp -o StrictHostKeyChecking=no -r app/ root@198.12.73.168:/root/tipoSTO/app/
+
+# Перезапустить
+sshpass -p 'S5M50Xb9Os2a8GvgUs' ssh -o StrictHostKeyChecking=no root@198.12.73.168 "pkill -f 'uvicorn app.main'; sleep 1; cd /root/tipoSTO && nohup /root/tipoSTO/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /root/tipoSTO/app.log 2>&1 &"
 ```
 
 ## Миграция данных 185.222 → Rent1C (январь 2026)
@@ -1076,8 +1083,8 @@ AI-чат для механиков СТО на базе OpenAI GPT-4 Vision. О
 
 ### Доступ
 
-- **URL:** http://147.45.98.69:8000/mechanic
-- **API:** http://147.45.98.69:8000/api/assistant/chat
+- **URL:** http://198.12.73.168:8000/mechanic
+- **API:** http://198.12.73.168:8000/api/assistant/chat
 
 ### Файлы
 
@@ -1106,7 +1113,7 @@ app/
 ### Пример запроса
 
 ```bash
-curl -X POST http://147.45.98.69:8000/api/assistant/chat \
+curl -X POST http://198.12.73.168:8000/api/assistant/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "какое масло залить в киа рио?", "session_id": "mechanic-1"}'
 ```
@@ -1150,18 +1157,13 @@ AUTODEV_API_KEY=sk_ad_...
 
 ```bash
 # Копировать файлы
-sshpass -p 'kFop??zSpU4QK-' scp -r app/ Administrator@147.45.98.69:"C:\\tipoSTO\\"
+sshpass -p 'S5M50Xb9Os2a8GvgUs' scp -o StrictHostKeyChecking=no -r app/ root@198.12.73.168:/root/tipoSTO/app/
 
 # Перезапустить сервер
-sshpass -p 'kFop??zSpU4QK-' ssh Administrator@147.45.98.69 "taskkill /F /IM python.exe"
-sshpass -p 'kFop??zSpU4QK-' ssh Administrator@147.45.98.69 "cd C:\tipoSTO && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+sshpass -p 'S5M50Xb9Os2a8GvgUs' ssh -o StrictHostKeyChecking=no root@198.12.73.168 "pkill -f 'uvicorn app.main'; sleep 1; cd /root/tipoSTO && nohup /root/tipoSTO/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /root/tipoSTO/app.log 2>&1 &"
 ```
 
-### DNS на сервере 147.45.98.69
+### Сервер 198.12.73.168 (RackNerd)
 
-Для работы OpenAI API на сервере настроен Google DNS:
-```bash
-netsh interface ip set dns name="Ethernet" static 8.8.8.8 primary
-netsh interface ip set dns name="outline-tap0" static 8.8.8.8 primary
-ipconfig /flushdns
-```
+Ubuntu 24.04 LTS. AI proxy (OpenAI-совместимый) работает на порту 8080.
+TIPO-STO на порту 8000. Логи: `/root/tipoSTO/app.log`.
